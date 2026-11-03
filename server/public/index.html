@@ -1,0 +1,1454 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="수율 일지"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>코리아식품 수율 일지</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="shim.js"></script>
+<style>
+/* Layout: 현장 클립보드 — 위쪽 단계 탭, 큰 입력칸, 입력된 숫자는 볼펜 파랑. 일지는 A4 종이 그대로. */
+:root{
+  --bg:#eef1f4; --card:#ffffff; --ink:#1b2026; --muted:#5b6571; --line:#d3d9e0; --soft:#f5f7f9;
+  --pen:#2340a8; --pen-soft:#e7ecfb; --ok:#1d7a4b; --ok-soft:#e3f3ea; --warn:#9a5c00; --warn-soft:#fbf0dc; --bad:#b3261e; --bad-soft:#fbe5e3; --loss:#d4602a; --gain:#1d9a6c;
+  --doc-bg:#ffffff; --doc-ink:#111111; --doc-line:#222222; --doc-head:#ececec;
+  --f-ui:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101317; --card:#181d23; --ink:#e6eaee; --muted:#9aa4af; --line:#2b323a; --soft:#1e242b;
+  --pen:#93a9ff; --pen-soft:#1e2847; --ok:#5cc690; --ok-soft:#16301f; --warn:#e6a845; --warn-soft:#33270f; --bad:#f2786e; --bad-soft:#3a1b19; --loss:#e07a48; --gain:#3dba8a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101317; --card:#181d23; --ink:#e6eaee; --muted:#9aa4af; --line:#2b323a; --soft:#1e242b;
+  --pen:#93a9ff; --pen-soft:#1e2847; --ok:#5cc690; --ok-soft:#16301f; --warn:#e6a845; --warn-soft:#33270f; --bad:#f2786e; --bad-soft:#3a1b19; --loss:#e07a48; --gain:#3dba8a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--card)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 0}
+.brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+.brand .sub{color:var(--muted);font-size:13px}
+.sync{margin-left:auto;font-size:12px;padding:3px 9px;border-radius:99px;background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.sync.shared{color:var(--ok);background:var(--ok-soft);border-color:transparent}
+.sync.local{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:8px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{flex:0 0 auto;border:0;background:none;font:inherit;font-size:14px;color:var(--muted);padding:9px 12px 11px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button .n{font-family:var(--f-num);font-size:12px;display:inline-grid;place-items:center;width:19px;height:19px;border-radius:50%;border:1.5px solid currentColor;margin-right:5px}
+nav.tabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--pen)}
+nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--pen);outline-offset:2px}
+main{padding-top:18px;display:grid;gap:18px}
+h2{font-size:19px;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h3{font-size:15px;margin:0 0 10px}
+.lead{color:var(--muted);margin:4px 0 0;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.grid2{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.fields .wide{grid-column:1/-1}
+label.f,div.f{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+label.f b,div.f>b{color:var(--ink);font-weight:600}
+[hidden]{display:none!important}
+.addrow{margin-top:6px;padding:10px;border:1px dashed var(--pen);border-radius:8px;background:var(--pen-soft);display:grid;gap:6px}
+.addrow .fields{gap:8px}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 11px;width:100%;min-width:0}
+input.num{font-family:var(--f-num);font-size:17px;color:var(--pen);font-weight:500}
+input.big{font-size:22px;padding:12px}
+.unit{position:relative}
+.unit input{padding-right:40px}
+.unit span{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:10px 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--pen);border-color:var(--pen);color:var(--card)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.small{padding:5px 10px;font-size:13px;font-weight:500}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.chip.s1{background:var(--warn-soft);color:var(--warn)}
+.chip.s2{background:var(--pen-soft);color:var(--pen)}
+.chip.s3{background:var(--ok-soft);color:var(--ok)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.lotlist{display:grid;gap:8px}
+.lot{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;text-align:left;font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;width:100%}
+.lot:hover{border-color:var(--muted)}
+.lot[aria-pressed="true"]{border-color:var(--pen);box-shadow:inset 0 0 0 1px var(--pen);background:var(--pen-soft)}
+.lot .t{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.lot .m{grid-column:1/-1;color:var(--muted);font-size:13px;font-family:var(--f-num)}
+.calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--soft);border-radius:8px;padding:10px 12px}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font-family:var(--f-num);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--pen)}
+.kpi .d{font-size:12px;color:var(--muted)}
+.kpi.warn{background:var(--warn-soft)} .kpi.warn .v{color:var(--warn)}
+.kpi.bad{background:var(--bad-soft)} .kpi.bad .v{color:var(--bad)}
+.kpi.ok .v{color:var(--ok)}
+.formula{font-size:12px;color:var(--muted);font-family:var(--f-num)}
+.warns{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.warns li{font-size:13px;padding:7px 10px;border-radius:7px;background:var(--warn-soft);color:var(--warn)}
+.warns li.bad{background:var(--bad-soft);color:var(--bad)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.t{border-collapse:collapse;width:100%;font-size:13px;min-width:720px}
+table.t th,table.t td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+table.t th{background:var(--soft);font-weight:600;color:var(--muted);font-size:12px}
+table.t td.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+table.t tr:last-child td{border-bottom:0}
+.pen{color:var(--pen)}
+.muted{color:var(--muted)}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
+.banner{padding:10px 14px;border-radius:8px;font-size:13px;background:var(--warn-soft);color:var(--warn)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{font:inherit;font-size:14px;border:0;background:var(--card);color:var(--muted);padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--pen);color:var(--card);font-weight:600}
+.packrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.packrow .m{font-family:var(--f-num);font-size:13px;color:var(--muted)}
+.confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
+.spark{display:block}
+/* 관리자 */
+.kpi.hero{background:var(--pen-soft)}
+.apill{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--soft);color:var(--muted)}
+.apill.good{background:var(--ok-soft);color:var(--ok)}.apill.warn{background:var(--warn-soft);color:var(--warn)}.apill.crit{background:var(--bad-soft);color:var(--bad)}
+.grid2.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:860px){.grid2.even{grid-template-columns:minmax(0,1fr)}}
+.rk-axis,.rk{display:grid;grid-template-columns:minmax(0,190px) minmax(100px,1fr) 76px minmax(0,130px);gap:12px;align-items:center}
+.rk-axis{font-size:11px;color:var(--muted);padding:0 6px 6px}.rk-axis .ax{display:flex;justify-content:space-between}
+.rk{padding:9px 6px;border:0;border-top:1px solid var(--line);background:none;font:inherit;color:inherit;text-align:left;width:100%}
+button.rk{cursor:pointer}button.rk:hover{background:var(--soft)}
+.rk-n{font-weight:600;font-size:14px;min-width:0;overflow-wrap:anywhere}.rk-n small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.rk-t{position:relative;height:16px}.rk-t .z{position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--muted)}
+.rk-t .b{position:absolute;top:2px;height:12px;border-radius:3px;background:var(--pen)}.rk-t .b.warn{background:var(--warn)}.rk-t .b.crit{background:var(--bad)}.rk-t .b.run{background:var(--line)}
+.rk-v{font-family:var(--f-num);font-weight:600;text-align:right;white-space:nowrap}.rk-v.warn{color:var(--warn)}.rk-v.crit{color:var(--bad)}.rk-v.run{color:var(--muted)}
+.rk-m{font-size:12.5px;color:var(--muted);min-width:0}.rk-m b{color:var(--ink)}
+@media (max-width:640px){.rk,.rk-axis{grid-template-columns:minmax(0,1fr) 76px;row-gap:6px}.rk-axis{display:none}.rk-t{grid-column:1/-1;order:3}.rk-m{grid-column:1/-1;order:4}}
+.alerts{display:grid;gap:8px}
+.alert{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 14px;border-radius:8px;background:var(--soft);border:0;font:inherit;color:inherit;text-align:left;width:100%}
+button.alert{cursor:pointer}button.alert:hover{box-shadow:inset 0 0 0 1px var(--line)}
+.alert .ic{width:12px;height:12px;border-radius:3px;background:var(--pen)}.alert .ic.warn{background:var(--warn);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)}.alert .ic.crit{background:var(--bad)}.alert .ic.good{background:var(--ok);border-radius:50%}
+.alert .tx small{display:block;color:var(--muted);font-size:12.5px}.alert .go{font-size:13px;color:var(--pen);font-weight:600;white-space:nowrap}
+@media (max-width:640px){.alert{grid-template-columns:auto minmax(0,1fr)}.alert .go{display:none}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.linkbtn{border:0;background:none;padding:0;font:inherit;font-size:12px;color:var(--pen);text-decoration:underline;cursor:pointer}
+table.t tr.click{cursor:pointer}table.t tr.click:hover{background:var(--soft)}table.t tr.sel{background:var(--pen-soft)}table.t td small{display:block;color:var(--muted);font-size:11.5px}
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+@media (max-width:1000px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:560px){.board{grid-template-columns:minmax(0,1fr)}}
+.lane{display:grid;gap:8px}.lane-h{font-weight:600;padding-bottom:6px;border-bottom:2px solid var(--ink)}.lane-h b{font-family:var(--f-num);color:var(--pen);margin-left:4px}
+.bcard{display:grid;gap:4px;text-align:left;font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;width:100%}
+.bcard.good{border-top-color:var(--ok)}.bcard.warn{border-top-color:var(--warn)}.bcard.crit{border-top-color:var(--bad)}.bcard.run{border-top-color:var(--pen)}
+.bcard .bt{font-weight:600}.bcard .chip{justify-self:start}
+nav.tabs button.admin-tab{color:var(--pen)}
+td.chip-bad{color:var(--bad);font-weight:600} td.chip-warn{color:var(--warn);font-weight:600}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--card);padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+/* ── 종이 일지 (양쪽 테마에서 흰 종이) ── */
+.paper-wrap{overflow-x:auto;background:var(--soft);border-radius:8px;padding:16px}
+.paper{background:var(--doc-bg);color:var(--doc-ink);width:794px;min-height:1000px;margin:0 auto;padding:40px 44px;font-family:var(--f-ui);font-size:11.5px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.paper table{border-collapse:collapse;width:100%;margin-bottom:16px}
+.paper th,.paper td{border:1px solid var(--doc-line);padding:4px 6px;text-align:center;height:24px;font-weight:400}
+.paper th{background:var(--doc-head);font-weight:600}
+.paper td.r{text-align:right;font-family:var(--f-num)}
+.paper td.l{text-align:left}
+.paper .hand{color:#1e3aa8;font-family:var(--f-num);font-weight:500}
+.paper .ttl{font-size:26px;font-weight:700;letter-spacing:.2em;text-align:center}
+.paper .rev{font-size:11px}
+.paper .dline{text-align:right;margin:2px 0 4px;font-size:12px}
+.paper .appr td,.paper .appr th{width:56px}
+.paper .appr td{height:40px}
+.paper .vert{writing-mode:vertical-rl;letter-spacing:.3em;font-weight:600}
+/* 태블릿·폰 터치 */
+@media (pointer:coarse){
+  .btn{min-height:44px;padding:11px 18px}
+  .btn.small{min-height:40px;padding:8px 14px;font-size:14px}
+  nav.tabs button{padding:12px 14px 13px;font-size:15px}
+  .seg button{min-height:44px;padding:10px 16px}
+  input[type=checkbox]{width:22px!important;height:22px}
+  .lot{padding:14px}
+  input,select{min-height:46px}
+}
+@media (min-width:600px) and (max-width:1100px){
+  .wrap{max-width:none}
+  .fields{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+}
+#homeBody{display:grid;gap:18px}
+.paper-wrap{overflow:hidden}
+.paper{transform-origin:top left}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{body.printing *{visibility:hidden!important}body.printing #paper,body.printing #paper *{visibility:visible!important}body.printing #paper{position:absolute;left:0;top:0;transform:none!important;box-shadow:none;width:auto;margin:0;padding:0}body.printing header.top{display:none}@page{size:A4;margin:10mm}}
+.who{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-left:auto}
+.who select{width:auto;min-height:0;padding:4px 8px;font-size:14px;max-width:150px}
+.brand .sync{margin-left:0}
+.who+.who{margin-left:0}
+.whoadd{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--pen-soft)}
+main>*,#homeBody>*,#adminBody>*,.grid2>*,.card{min-width:0}
+select{max-width:100%}
+.loginwrap{display:grid;place-items:center;padding-block:24px}
+.brandmark{font-size:13px;font-weight:600;color:var(--pen);letter-spacing:.02em}
+.login h2{margin:0;font-size:24px}
+.login .lead{margin:0}
+.fields.lf{grid-template-columns:1fr;text-align:left}
+.fields.lf input{font-size:17px;padding:12px}
+.loginbtn{width:100%;font-size:17px;padding:14px;min-height:50px}
+.keep{gap:8px;font-size:14px;color:var(--muted);justify-content:flex-start}
+.keep input{width:auto}
+.login{width:100%;max-width:420px;display:grid;gap:12px;text-align:center}
+.login.wide{max-width:780px}
+.names{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.namebtn{font:inherit;font-size:19px;font-weight:600;padding:20px 10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);cursor:pointer;display:grid;gap:2px}
+.namebtn small{font-size:12px;color:var(--pen);font-weight:500}
+.namebtn:hover{border-color:var(--pen)}
+.dots{display:flex;gap:16px;justify-content:center;margin:4px 0}
+.dots span{width:18px;height:18px;border-radius:50%;border:2px solid var(--muted)}
+.dots span.on{background:var(--pen);border-color:var(--pen)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:0 auto;width:100%}
+.pad button{font:inherit;font-size:26px;font-family:var(--f-num);padding:16px 0;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;min-height:60px}
+.pad button:active{background:var(--pen-soft)}
+.pad button:disabled{opacity:.4}
+.pad button[data-act="pinDel"],.pad button[data-act="loginBack"]{font-size:15px;font-family:var(--f-ui);color:var(--muted)}
+.loginerr{color:var(--bad);margin:0;font-size:14px;min-height:1.4em}
+.userchip{font-size:13px;font-weight:600;color:var(--pen);background:var(--pen-soft);padding:4px 10px;border-radius:99px;white-space:nowrap}
+#userBox{display:flex;gap:6px;align-items:center}
+#userBox:empty{display:none}
+#chkText{font-family:var(--f-num);font-size:13px;resize:vertical}
+.ck{display:inline-grid;place-items:center;width:20px;height:20px;border:1.5px solid var(--muted);border-radius:5px;margin-right:8px;font-size:13px;color:var(--pen);vertical-align:-3px}
+.lot[aria-pressed="true"] .ck{border-color:var(--pen);background:var(--card)}
+@media (pointer:coarse){.who select{min-height:40px}}
+</style>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <h1>코리아식품 수율 일지</h1>
+      <span class="sub" id="today"></span>
+      <label class="who">사업장 <select id="siteSel" aria-label="사업장"></select></label>
+      <label class="who">입력자 <select id="whoSel" aria-label="입력자"></select></label><span id="userBox"></span>
+      <span class="sync" id="sync">연결 중…</span>
+    </div>
+    <div class="whoadd" id="whoAdd" hidden><span class="muted" style="font-size:13px">명단에 이름 추가</span><input id="whoNew" placeholder="이름" style="max-width:180px" enterkeyhint="done"><button type="button" class="btn small primary" data-act="addWho">추가</button><button type="button" class="btn small" data-act="cancelWho">취소</button></div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button data-tab="home" role="tab">현황</button>
+      <button data-tab="release" role="tab"><span class="n">1</span>원료육 출고</button>
+      <button data-tab="wash" role="tab"><span class="n">2</span>세척 중량</button>
+      <button data-tab="heat" role="tab"><span class="n">3</span>가열</button>
+      <button data-tab="pack" role="tab"><span class="n">4</span>포장 수량</button>
+      <button data-tab="docs" role="tab">일지 출력</button>
+      <button data-tab="settings" role="tab" data-admin hidden>기준·백업</button>
+      <button data-tab="admin" role="tab" data-admin hidden class="admin-tab">관리자</button>
+    </nav>
+  </div>
+</header>
+<div class="wrap"><main id="view"></main></div>
+
+<script>
+(function(){
+"use strict";
+const SERVER=!!window.__YIELD_SERVER__;
+/* ───────── 공통 ───────── */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>{if(v===""||v==null)return null;const n=Number(String(v).replace(/,/g,""));return isFinite(n)?n:null};
+const fmt=(n,d=1)=>n==null||!isFinite(n)?"–":n.toLocaleString("ko-KR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtKg=n=>n==null||!isFinite(n)?"–":fmt(n,Number.isInteger(Math.round(n*10)/10)?0:1);
+const pct=x=>x==null||!isFinite(x)?"–":(x*100).toFixed(1)+"%";
+const pad=n=>String(n).padStart(2,"0");
+const lt=t=>{if(!t)return"";const d=new Date(t);return isNaN(d)?String(t).slice(0,16).replace("T"," "):d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes())};
+const dstr=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const todayStr=()=>dstr(new Date());
+const addDays=(s,n)=>{if(!s)return"";const d=new Date(s+"T00:00:00");d.setDate(d.getDate()+n);return dstr(d)};
+const DOW="일월화수목금토";
+const dow=s=>s?DOW[new Date(s+"T00:00:00").getDay()]:"";
+const shortD=s=>s?s.slice(2)+" ("+dow(s)+")":"";
+const yymmdd=s=>s?s.slice(2).replace(/-/g,"."):"";
+const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const sgn=x=>x==null||!isFinite(x)?"–":(x>0?"+":x<0?"−":"±")+Math.abs(x).toFixed(1);
+const won=x=>{if(x==null)return"–";const a=Math.abs(x);return a>=1e8?(a/1e8).toFixed(1)+"억 원":a>=1e4?Math.round(a/1e4).toLocaleString("ko-KR")+"만 원":Math.round(a).toLocaleString("ko-KR")+"원"};
+const sum=(a,f)=>a.reduce((x,y)=>x+(f(y)||0),0);
+let toastT;function toast(m){let t=$(".toast");if(!t){t=document.createElement("div");t.className="toast";t.setAttribute("role","status");document.body.appendChild(t)}t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2800)}
+const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+/* ───────── 저장소 · 저장 대기열 ───────── */
+const LKEY="kf-yield-manual-v1";
+const DEV=(()=>{let d=ls.get(LKEY+"-dev");if(!d){d="d"+Math.random().toString(36).slice(2,8);ls.set(LKEY+"-dev",d)}return d})();
+const DEFAULT_CFG={tol:10,manager:"",formRev:"2023-02-06",workers:[],sites:["코리아식품","하비랑"],lowStock:800};
+const S={lots:{},packs:{},products:{},raws:{},staff:{},cfg:{...DEFAULT_CFG},prices:{},logs:{}};
+let mode="connecting",db=null;
+let outbox=ls.get(LKEY+"-outbox")||{};
+const saveOutbox=()=>ls.set(LKEY+"-outbox",outbox);
+function setLocal(path,data){const [c,id]=path.split("/");
+  if(c==="config"){S.cfg=data?{...DEFAULT_CFG,...data}:{...DEFAULT_CFG};return}
+  if(c==="admin"){S.prices=data?{...data}:{};return}
+  if(!S[c])return;if(data==null)delete S[c][id];else S[c][id]={...clone(data),id}}
+function persistLocal(){if(mode==="local")ls.set(LKEY,{lots:S.lots,packs:S.packs,raws:S.raws,staff:S.staff,products:S.products,cfg:S.cfg,logs:S.logs,prices:S.prices})}
+function put(path,data,quiet){const b=clone(data);delete b.id;setLocal(path,b);
+  if(mode==="local")persistLocal();
+  else{outbox[path]={op:"set",data:b,ts:Date.now()+Math.random()};saveOutbox();flush()}
+  if(!quiet)refresh()}
+const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r({code:"timeout"}),ms))]);
+let flushing=false,retryT=null,lastErr="";
+async function flush(){
+  if(mode!=="shared"||flushing)return;flushing=true;
+  try{
+    for(const [path,it] of Object.entries(outbox).sort((a,b)=>a[1].ts-b[1].ts)){
+      try{await withTimeout(it.op==="set"?db.doc(path).set(it.data):db.doc(path).delete(),15000);
+        if(outbox[path]&&outbox[path].ts===it.ts){delete outbox[path];saveOutbox()}lastErr=""}
+      catch(e){const code=e&&e.code||"timeout";
+        if(code==="invalid_argument"){delete outbox[path];saveOutbox();toast("권한이 없어 저장하지 못한 기록이 있습니다. 관리자에게 문의하세요.");continue}
+        lastErr=code;break}
+    }
+  }finally{flushing=false;syncChip();clearTimeout(retryT);if(Object.keys(outbox).length)retryT=setTimeout(flush,lastErr?15000:800)}
+}
+addEventListener("online",()=>{lastErr="";flush()});
+addEventListener("offline",()=>syncChip());
+function overlay(c){Object.entries(outbox).forEach(([path,it])=>{if(path.split("/")[0]===c)setLocal(path,it.op==="set"?it.data:null)})}
+
+/* ───────── 변경 기록 ───────── */
+const who=()=>{if(loginOn()){const x=getSess();return x?x.name:""}return ls.get(LKEY+"-me")||""};
+let logReady=false;const pendingLog=[];
+function logEvent(act,d,ref){const e={t:new Date().toISOString(),who:who()||"미지정",act,d:d||"",ref:ref||""};
+  if(!logReady){pendingLog.push(e);return}writeLog([e])}
+function writeLog(es){const date=todayStr(),id=date+"_"+DEV;const cur=S.logs[id]?clone(S.logs[id]):{date,dev:DEV,entries:[]};delete cur.id;cur.entries.push(...es);put("logs/"+id,cur,true)}
+function setLogReady(){if(logReady)return;logReady=true;if(pendingLog.length)writeLog(pendingLog.splice(0))}
+
+/* ───────── 계산 ───────── */
+const prod=id=>S.products[id]||null;
+const byDateDesc=(a,b)=>(b.releaseDate||b.date||"").localeCompare(a.releaseDate||a.date||"")||(b.createdAt||"").localeCompare(a.createdAt||"");
+const sites=()=>(S.cfg.sites&&S.cfg.sites.length?S.cfg.sites:DEFAULT_CFG.sites);
+const siteOf=x=>(x&&x.site)||sites()[0];
+const packSite=p=>p.site||siteOf(S.lots[(p.lotIds&&p.lotIds[0])||p.lotId]);
+const curSite=()=>UI.site&&sites().includes(UI.site)?UI.site:"";
+const lotsArr=inc=>Object.values(S.lots).filter(l=>(inc||!l.deleted)&&(!curSite()||siteOf(l)===curSite())).sort(byDateDesc);
+const packsArr=inc=>Object.values(S.packs).filter(p=>(inc||!p.deleted)&&(!curSite()||packSite(p)===curSite())).sort(byDateDesc);
+const rawsArr=inc=>Object.values(S.raws).filter(r=>(inc||!r.deleted)&&(!curSite()||siteOf(r)===curSite())).sort((a,b)=>(b.inDate||"").localeCompare(a.inDate||"")||(b.createdAt||"").localeCompare(a.createdAt||""));
+const rawUsed=(id,except)=>sum(Object.values(S.lots).filter(l=>!l.deleted&&l.rawId===id&&l.id!==except),l=>num(l.releaseKg));
+const rawRemain=(r,except)=>(num(r.inKg)||0)-rawUsed(r.id,except);
+const prodArr=()=>Object.values(S.products).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ko"));
+const packIds=p=>p.lotIds&&p.lotIds.length?p.lotIds:(p.lotId?[p.lotId]:[]);
+const packsOf=id=>packsArr().filter(p=>packIds(p).includes(id));
+function unitIds(l){const g=l.wash&&l.wash.group;return g&&g.lotIds&&g.lotIds.length>1?g.lotIds.filter(id=>S.lots[id]&&!S.lots[id].deleted):[l.id]}
+function packsOfUnit(ids){return packsArr().filter(p=>packIds(p).some(x=>ids.includes(x)))}
+function share(l,p){const ids=packIds(p);if(ids.length<=1)return 1;const tot=sum(ids,id=>num(S.lots[id]?.wash?.kg));return tot?(num(l.wash?.kg)||0)/tot:1/ids.length}
+function raw(l){const w=l.wash||{},h=l.heat||{};
+  const o={rel:num(l.releaseKg)||0,thaw:num(w.thawKg),wash:num(w.kg),heatIn:num(h.inKg),heatOut:num(h.outKg),packKg:0,qty:0,remainKg:0,wasteKg:0,sauceKg:0,nPacks:0};
+  packsOf(l.id).forEach(p=>{const s=share(l,p);o.packKg+=(num(p.qty)||0)*(num(p.sizeKg)||0)*s;o.qty+=(num(p.qty)||0)*s;o.remainKg+=(num(p.remainG)||0)/1000*s;o.wasteKg+=(num(p.wasteG)||0)/1000*s;o.sauceKg+=(num(p.sauceKg)||0)*s;o.nPacks++});
+  return o}
+function sumRaw(list){const o={rel:0,thaw:null,wash:null,heatIn:null,heatOut:null,packKg:0,qty:0,remainKg:0,wasteKg:0,sauceKg:0,nPacks:0};
+  const add=(k,v)=>{if(v!=null)o[k]=(o[k]||0)+v};
+  list.forEach(r=>{o.rel+=r.rel;add("thaw",r.thaw);add("wash",r.wash);add("heatIn",r.heatIn);add("heatOut",r.heatOut);["packKg","qty","remainKg","wasteKg","sauceKg"].forEach(k=>o[k]+=r[k]);o.nPacks=Math.max(o.nPacks,r.nPacks)});return o}
+function ratios(o){const has=o.nPacks>0;o.acc=o.packKg+o.remainKg+o.wasteKg;return Object.assign(o,{
+  washYield:o.thaw&&o.wash?o.wash/o.thaw:null,washVsRel:o.rel&&o.wash?o.wash/o.rel:null,
+  heatYield:o.heatIn&&o.heatOut?o.heatOut/o.heatIn:null,
+  packYield:o.wash&&has?o.acc/o.wash:null,goodYield:o.wash&&has?o.packKg/o.wash:null,
+  totalYield:o.rel&&has?o.packKg/o.rel:null,inputTotal:o.wash!=null?o.wash+o.sauceKg:null})}
+const STG={wash:["세척 대기","s1"],heat:["가열 대기","s1"],pack:["포장 대기","s2"],packing:["포장 중","s2"],done:["포장 완료","s3"]};
+function stageOf(l,o){const p=prod(l.productId);if(o.wash==null)return"wash";if(p&&p.needsHeat&&o.heatOut==null&&!o.nPacks)return"heat";if(!o.nPacks)return"pack";if(!l.packDone)return"packing";return"done"}
+function finish(o,l,n){o.stage=stageOf(l,o);[o.stageLabel,o.stageCls]=STG[o.stage];o.group=n>1;o.warns=warnings(l,o);return o}
+const calc=l=>finish(ratios(raw(l)),l,unitIds(l).length);
+function calcUnit(ids){const L=ids.map(id=>S.lots[id]).filter(Boolean);const o=finish(ratios(sumRaw(L.map(raw))),L[0],L.length);o.lots=L;return o}
+function warnings(l,o){
+  const out=[],p=prod(l.productId),tol=num(S.cfg.tol)||10,w=l.wash||{},h=l.heat||{};
+  const dv=(y,std,name)=>{if(y==null||!p||!num(std))return;const d=y*100-std;if(Math.abs(d)>tol)out.push({lv:Math.abs(d)>tol*2?"bad":"warn",t:`${name} 수율 ${pct(y)} — 기준 ${std}%보다 ${d>0?"+":""}${d.toFixed(1)}%p`})};
+  dv(o.washYield,p&&p.stdWash,"세척");dv(o.heatYield,p&&p.stdHeat,"가열");dv(o.packYield,p&&p.stdPack,"포장");
+  if(o.thaw!=null&&o.rel){const x=o.thaw/o.rel;if(x>1.3||x<0.6)out.push({lv:"bad",t:`해동 중량이 출고의 ${pct(x)} — 숫자를 다시 확인하세요`})}
+  if(o.wash!=null&&o.thaw){const x=o.wash/o.thaw;if(x>1.5||x<0.5)out.push({lv:"bad",t:`세척 중량이 해동 중량의 ${pct(x)} — 자릿수 오타일 수 있습니다`})}
+  if(o.heatYield!=null&&(o.heatYield>1.2||o.heatYield<0.4))out.push({lv:"bad",t:`가열 후 중량이 가열 전의 ${pct(o.heatYield)} — 숫자를 확인하세요`});
+  if(o.inputTotal!=null&&o.nPacks&&o.acc>o.inputTotal*1.25)out.push({lv:"bad",t:`포장+잔량+폐기 ${fmt(o.acc)}kg이 투입 ${fmt(o.inputTotal)}kg보다 많습니다 — 수량을 확인하세요`});
+  if(p&&p.needsHeat&&o.nPacks&&o.heatOut==null)out.push({lv:"warn",t:"가열 제품인데 가열 후 중량이 없습니다"});
+  if(w.date&&l.releaseDate&&w.date<l.releaseDate)out.push({lv:"warn",t:"세척일이 출고일보다 빠릅니다"});
+  if(h.date&&w.date&&h.date<w.date)out.push({lv:"warn",t:"가열일이 세척일보다 빠릅니다"});
+  packsOf(l.id).forEach(pk=>{if(w.date&&pk.date<w.date)out.push({lv:"warn",t:`포장일(${pk.date})이 세척일보다 빠릅니다`})});
+  return out}
+const lotTitle=l=>{const p=prod(l.productId);return p?p.name:"제품 미지정"};
+function unitsOf(lots){const seen=new Set(),out=[];lots.forEach(l=>{const ids=unitIds(l);const k=ids.slice().sort().join("+");if(seen.has(k))return;seen.add(k);out.push({key:k,ids,lot:S.lots[ids[0]]||l})});return out}
+const unitTitle=u=>lotTitle(u.lot)+(u.ids.length>1?` · 묶음 ${u.ids.length}건`:"");
+const unitBL=u=>u.ids.map(id=>S.lots[id]?.bl||"").join(", ");
+const keyIds=k=>k?k.split("+"):[];
+
+/* ───────── 화면 상태 ───────── */
+const UI={tab:"home",washSel:[],washMulti:false,heatUnit:null,packUnit:null,packMode:"lot",editPack:null,editLot:null,
+  docType:"work",docDate:todayStr(),docUnit:null,docTouched:false,period:"30",prodFilter:"",showDone:{wash:false,heat:false,pack:false},
+  confirm:null,_pAdmin:false,login:{step:"login"},aView:"overview",aPeriod:"30",flowSel:"",pendingTab:null,rType:"week",rKey:"",logDate:todayStr(),logQ:"",site:ls.get(LKEY+"-site")||"",relMode:"release",editRaw:null,tUnit:"day",chk:null,chkText:"",chkAll:false};
+Object.defineProperty(UI,"isAdmin",{get(){if(!this._pAdmin)return false;if(!loginOn())return true;const x=getSess();return !!x&&(x.role==="manager"||!managers().length)},set(v){this._pAdmin=!!v}});
+const TABS=["home","release","wash","heat","pack","docs","settings","admin"];
+const ADMIN_TABS=["settings","admin"];
+let live=[];
+function setTab(t,push=true){if(ADMIN_TABS.includes(t)&&!UI.isAdmin){UI.pendingTab=t;t="home"}UI.tab=t;UI.confirm=null;
+  $$("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+  if(push){try{history.replaceState(null,"","#"+t)}catch{}}ls.set(LKEY+"-tab",t);render();window.scrollTo(0,0)}
+function refresh(){syncChip();userBox();siteOptions();const g=gated();if(g!==lastGate){lastGate=g;render();return}if(g){if(UI.login.loading)renderLogin();return}whoOptions();applyRole();live.forEach(f=>f());fitPaper()}
+function syncChip(){const c=$("#sync");if(!c)return;const n=Object.keys(outbox).length,off=navigator.onLine===false;
+  if(mode==="shared"&&(n||off)){c.className="sync local";c.textContent=(off?"오프라인 · ":"")+(n?`저장 대기 ${n}건`:"연결 끊김");c.title="연결되면 자동으로 저장됩니다"}
+  else{c.className="sync "+(mode==="shared"?"shared":mode==="local"?"local":"");c.textContent=mode==="shared"?(SERVER?"서버에 저장됨":"공유 저장됨"):mode==="local"?"이 기기에만 저장":"연결 중…";c.title=""}}
+const normName=n=>String(n||"").replace(/\s+/g," ").trim();
+const workers=()=>{const seen=new Set();return [...(S.cfg.workers||[]),...Object.values(S.staff).filter(w=>!w.deleted).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||"")).map(w=>w.name)].map(normName).filter(n=>n&&!seen.has(n.replace(/\s/g,""))&&seen.add(n.replace(/\s/g,"")))};
+function whoOptions(){const s=$("#whoSel");if(!s)return;const ws=workers(),me=who();
+  const sig=ws.join("|")+"#"+me;if(s.dataset.sig===sig)return;s.dataset.sig=sig;
+  s.innerHTML=`<option value="">${ws.length?"이름 선택":"명단 없음"}</option>`+ws.map(n=>`<option ${n===me?"selected":""}>${esc(n)}</option>`).join("")+(me&&!ws.includes(me)?`<option selected>${esc(me)}</option>`:"")+`<option value="__add">＋ 이름 추가…</option>`}
+function addWorkerName(raw){const n=normName(raw);if(!n){toast("이름을 입력하세요");return false}
+  const same=workers().find(x=>x.replace(/\s/g,"")===n.replace(/\s/g,""));if(same){toast(`‘${same}’은(는) 이미 명단에 있습니다`);return same}
+  put("staff/"+uid("w"),{name:n,addedBy:who()||"",createdAt:new Date().toISOString()});logEvent("직원 추가",n);toast(`‘${n}’을(를) 명단에 추가했습니다`);return n}
+function removeWorkerName(n){
+  if((S.cfg.workers||[]).includes(n)){const c={...S.cfg,workers:(S.cfg.workers||[]).filter(x=>x!==n)};delete c.id;put("config/main",c,true)}
+  Object.values(S.staff).filter(w=>!w.deleted&&normName(w.name)===n).forEach(w=>{const x=clone(w);x.deleted=true;x.deletedAt=new Date().toISOString();x.deletedBy=who();put("staff/"+w.id,x,true)});
+  logEvent("직원 빼기",n);refresh()}
+function needWho(){if(loginOn()&&!getSess()){render();return true}if(workers().length&&!who()){toast("화면 위 ‘입력자’에서 이름을 먼저 고르세요");const s=$("#whoSel");s&&s.focus();return true}return false}
+function render(){live=[];const v=$("#view");const g=gated();lastGate=g;$("#tabs").hidden=g;
+  if(g){renderLogin();syncChip();userBox();siteOptions();return}
+  const R={home:rHome,release:rRelease,wash:rWash,heat:rHeat,pack:rPack,docs:rDocs,settings:rSettings,admin:rAdmin}[UI.tab];
+  v.innerHTML=R();(R.after||(()=>{}))();refresh()}
+function slot(id,fn){live.push(()=>{const el=document.getElementById(id);if(el)el.innerHTML=fn()})}
+function fitPaper(){const w=$(".paper-wrap"),pp=$("#paper");if(!w||!pp)return;pp.style.transform="";w.style.height="";const k=Math.min(1,(w.clientWidth-32)/794);
+  if(k<1){pp.style.transform=`scale(${k})`;pp.style.marginLeft="0";w.style.height=(pp.offsetHeight*k+32)+"px"}else pp.style.marginLeft="auto"}
+addEventListener("resize",()=>{clearTimeout(fitPaper.t);fitPaper.t=setTimeout(fitPaper,120)});
+const cls=(y,std)=>{if(y==null||!num(std))return"";const d=Math.abs(y*100-std),t=num(S.cfg.tol)||10;return d>t*2?"chip-bad":d>t?"chip-warn":""};
+const kcls=(y,std)=>{if(y==null||!num(std))return"";const d=Math.abs(y*100-std),t=num(S.cfg.tol)||10;return d>t*2?"bad":d>t?"warn":"ok"};
+const warnList=ws=>ws.length?`<ul class="warns" style="margin-top:10px">${ws.map(w=>`<li class="${w.lv}">${esc(w.t)}</li>`).join("")}</ul>`:"";
+const ADD_LBL={origin:"원산지",raw:"원료육 품명",product:"제품"};
+const DEF_ORIGINS=["캐나다산","미국산","스페인산","국내산","외국산"],DEF_RAWS=["(돈막창)하이라이프"];
+const uniq=a=>[...new Set(a.filter(Boolean))];
+const originList=()=>uniq([...(S.cfg.origins||DEF_ORIGINS),...Object.values(S.lots).map(l=>l.origin),...Object.values(S.raws).map(r=>r.origin)]);
+const rawNameList=()=>uniq([...(S.cfg.rawNames||DEF_RAWS),...Object.values(S.lots).map(l=>l.raw),...Object.values(S.raws).map(r=>r.raw)]);
+const addOpt=k=>k==="product"&&!UI.isAdmin?`<option value="" disabled>※ 새 제품은 관리자가 추가합니다</option>`:`<option value="__add">＋ 새 ${ADD_LBL[k]} 추가…</option>`;
+const listOptions=(list,v)=>(v&&!list.includes(v)?[...list,v]:list).map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");
+function addSel(id,k,inner){
+  const form=k==="product"?`<div class="fields" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))"><label class="f wide"><b>제품명</b><input id="${id}_new" placeholder="예: 회색 숙성돼지막창 - 1kg"></label>
+    <label class="f"><b>규격</b><span class="unit"><input id="${id}_size" class="num" inputmode="decimal" value="2"><span>kg</span></span></label>
+    <label class="f"><b>세척 기준</b><span class="unit"><input id="${id}_w" class="num" inputmode="decimal"><span>%</span></span></label>
+    <label class="f"><b>포장 기준</b><span class="unit"><input id="${id}_p" class="num" inputmode="decimal"><span>%</span></span></label>
+    <label class="f"><b>소비기한</b><span class="unit"><input id="${id}_d" class="num" inputmode="numeric"><span>일</span></span></label>
+    <label class="row" style="gap:6px;font-size:13px;color:var(--ink)"><input type="checkbox" id="${id}_h" style="width:auto"> 가열 제품</label></div>`:`<input id="${id}_new" placeholder="새 ${ADD_LBL[k]} (예: ${k==="origin"?"브라질산":"(돈막창)OO"})">`;
+  return `<select id="${id}" data-addsel="${k}">${inner}${addOpt(k)}</select><div class="addrow" id="${id}_add" hidden>${form}
+   <div class="row" style="gap:6px"><button type="button" class="btn small primary" data-act="addOpt" data-id="${id}" data-k="${k}">추가</button><button type="button" class="btn small" data-act="cancelOpt" data-id="${id}">취소</button></div>
+   ${k==="product"?`<p class="formula" style="margin:0">양념소스·생산일지 제목 같은 나머지 기준은 ‘기준·백업’에서 채울 수 있습니다.</p>`:""}</div>`}
+function setSel(id,v){const s=$("#"+id);if(!s||!v)return;if(![...s.options].some(o=>o.value===v)){const o=document.createElement("option");o.textContent=v;o.value=v;const add=[...s.options].find(o=>o.value==="__add"||o.disabled);s.insertBefore(o,add||null)}s.value=v}
+function addOption(id,k){const box=$("#"+id+"_add"),s=$("#"+id);
+  if(k!=="product"){const v=($("#"+id+"_new").value||"").trim();if(!v){toast(`새 ${ADD_LBL[k]}을(를) 입력하세요`);return}setSel(id,v);box.hidden=true;$("#"+id+"_new").value="";
+    if(UI.isAdmin){const key=k==="origin"?"origins":"rawNames",base=k==="origin"?originList():rawNameList(),c={...S.cfg,[key]:uniq([...base,v])};delete c.id;put("config/main",c,true);logEvent(`${ADD_LBL[k]} 추가`,v)}
+    toast(`‘${v}’을(를) 골랐습니다`);s.dispatchEvent(new Event("input",{bubbles:true}));return}
+  if(!UI.isAdmin){toast("새 제품은 관리자가 추가합니다");return}
+  const name=($("#"+id+"_new").value||"").trim(),size=num($("#"+id+"_size").value);if(!name){toast("제품명을 입력하세요");return}if(!size){toast("규격(kg)을 숫자로 입력하세요");return}
+  if(prodArr().some(p=>p.name===name)){toast("같은 이름의 제품이 이미 있습니다");return}
+  const o={name,sizeKg:size,stdWash:num($("#"+id+"_w").value),stdPack:num($("#"+id+"_p").value),expiryDays:num($("#"+id+"_d").value),needsHeat:$("#"+id+"_h").checked,stdHeat:null,workName:"",origin:"",sauce:"",logTitle:"생산일지",logSub:""};
+  const pid=uid("p_");put("products/"+pid,o);logEvent("제품 추가",`${name} (${size}kg)`);
+  s.innerHTML=prodOptions(pid)+addOpt("product");box.hidden=true;s.dispatchEvent(new Event("change",{bubbles:true}));toast(`‘${name}’을(를) 추가했습니다`)}
+const prodOptions=(v,filter)=>`<option value="">제품 선택</option>`+prodArr().filter(filter||(()=>true)).map(p=>`<option value="${p.id}" ${v===p.id?"selected":""}>${esc(p.name)}</option>`).join("");
+const delBtn=(id,kind,label)=>!UI.isAdmin?"":UI.confirm===id?`<span class="confirm">${label||"삭제할까요?"} <button class="btn small danger" data-act="del" data-k="${kind}" data-id="${id}">삭제</button><button class="btn small" data-act="noConfirm">취소</button></span>`:`<button class="btn small" data-act="askDel" data-id="${id}">삭제</button>`;
+
+/* ───────── 현황 ───────── */
+function rHome(){slot("homeBody",homeBody);
+  return `<div><h2>수율 현황</h2><p class="lead">현장 입력이 들어오는 대로 갱신됩니다. 수율은 작업일지 계산식과 같습니다.</p></div><div id="homeBody"></div>`}
+function homeBody(){
+  const all=lotsArr();if(!all.length)return emptyStart();
+  const cut=UI.period==="all"?"":addDays(todayStr(),-Number(UI.period));
+  const C=all.filter(l=>(!cut||(l.releaseDate||"")>=cut)&&(!UI.prodFilter||l.productId===UI.prodFilter)).map(l=>({l,c:calc(l)}));
+  const open=C.filter(x=>x.c.stage!=="done");
+  const W=C.filter(x=>x.c.washYield!=null),P=C.filter(x=>x.c.packYield!=null),T=C.filter(x=>x.c.totalYield!=null),Hh=C.filter(x=>x.c.heatYield!=null);
+  const avgW=W.length?sum(W,x=>x.c.wash)/sum(W,x=>x.c.thaw):null,avgP=P.length?sum(P,x=>x.c.acc)/sum(P,x=>x.c.wash):null,avgT=T.length?sum(T,x=>x.c.packKg)/sum(T,x=>x.c.rel):null,avgH=Hh.length?sum(Hh,x=>x.c.heatOut)/sum(Hh,x=>x.c.heatIn):null;
+  const avg1=W.length?sum(W,x=>x.c.wash)/sum(W,x=>x.c.rel):null;
+  const wn=C.flatMap(x=>x.c.warns.map(w=>({...w,l:x.l})));
+  const filt=`<div class="row"><div class="seg" role="group" aria-label="기간">${[["7","7일"],["30","30일"],["90","90일"],["all","전체"]].map(([k,t])=>`<button data-act="period" data-v="${k}" aria-pressed="${UI.period===k}">${t}</button>`).join("")}</div>
+    <select data-act="prodFilter" style="width:auto"><option value="">전체 제품</option>${prodArr().map(p=>`<option value="${p.id}" ${UI.prodFilter===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></div>`;
+  const kpis=`<div class="calc">
+    <div class="kpi"><div class="l">진행 중 로트</div><div class="v">${open.length}</div><div class="d">세척 대기 ${open.filter(x=>x.c.stage==="wash").length} · 가열 대기 ${open.filter(x=>x.c.stage==="heat").length} · 포장 ${open.filter(x=>x.c.stage==="pack"||x.c.stage==="packing").length}</div></div>
+    <div class="kpi"><div class="l">세척 수율</div><div class="v">${pct(avgW)}</div><div class="d">세척 ÷ 해동 중량</div></div>
+    ${Hh.length?`<div class="kpi"><div class="l">가열 수율</div><div class="v">${pct(avgH)}</div><div class="d">가열 후 ÷ 가열 전</div></div>`:""}
+    <div class="kpi"><div class="l">포장 수율</div><div class="v">${pct(avgP)}</div><div class="d">(포장+잔량+폐기) ÷ 세척</div></div>
+    <div class="kpi"><div class="l">1차 수율 (세척)</div><div class="v">${pct(avg1)}</div><div class="d">세척 ÷ 출고 서류 중량</div></div><div class="kpi"><div class="l">3차 수율 (포장 양품)</div><div class="v">${pct(avgT)}</div><div class="d">포장 ÷ 출고 서류 중량</div></div>
+    <div class="kpi ${wn.length?"warn":"ok"}"><div class="l">확인 필요</div><div class="v">${wn.length}</div><div class="d">기준 ±${S.cfg.tol}%p 또는 입력 이상</div></div></div>`;
+  const wl=wn.length?`<div class="card"><h3>확인이 필요한 입력</h3><ul class="warns">${wn.slice(0,12).map(w=>`<li class="${w.lv}"><b>${esc(w.l.bl)}</b> · ${esc(lotTitle(w.l))} — ${esc(w.t)}</li>`).join("")}</ul></div>`:"";
+  const trend=prodArr().filter(p=>!UI.prodFilter||p.id===UI.prodFilter).map(p=>{
+    const xs=C.filter(x=>x.l.productId===p.id&&x.c.washYield!=null).sort((a,b)=>(a.l.wash.date||"").localeCompare(b.l.wash.date||""));if(!xs.length)return"";
+    return `<div class="kpi"><div class="l">${esc(p.name)}</div>${spark(xs.map(x=>x.c.washYield*100),p.stdWash,"세척")}${spark(xs.filter(x=>x.c.heatYield!=null).map(x=>x.c.heatYield*100),p.stdHeat,"가열")}${spark(xs.filter(x=>x.c.packYield!=null).map(x=>x.c.packYield*100),p.stdPack,"포장")}<div class="d">로트 ${xs.length}건 · 점선 = 기준</div></div>`}).join("");
+  const rows=C.map(({l,c})=>{const p=prod(l.productId);return `<tr><td>${esc(l.releaseDate||"")}</td><td>${esc(l.bl)}${c.group?` <span class="chip">묶음</span>`:""}</td><td>${esc(lotTitle(l))}</td>
+    <td class="n">${fmtKg(c.rel)}</td><td class="n">${fmtKg(c.thaw)}</td><td class="n">${fmtKg(c.wash)}</td><td class="n ${cls(c.washYield,p?.stdWash)}">${pct(c.washYield)}</td>
+    <td class="n ${cls(c.heatYield,p?.stdHeat)}">${pct(c.heatYield)}</td><td class="n">${c.qty?Math.round(c.qty)+"ea":"–"}</td><td class="n">${c.packKg?fmtKg(c.packKg):"–"}</td>
+    <td class="n ${cls(c.packYield,p?.stdPack)}">${pct(c.packYield)}</td><td class="n">${pct(c.totalYield)}</td>
+    <td><span class="chip ${c.stageCls}">${c.stageLabel}</span>${c.warns.length?` <span class="chip bad">확인 ${c.warns.length}</span>`:""}</td></tr>`}).join("");
+  return `${filt}${kpis}${wl}${trend?`<div class="card"><h3>제품별 수율 추이</h3><div class="calc">${trend}</div></div>`:""}
+  <div class="card"><h3>로트별 기록 (${C.length}건)</h3>${C.length?`<div class="tbl-wrap"><table class="t"><thead><tr><th>출고일</th><th>이력·B/L</th><th>제품</th><th>출고kg</th><th>해동kg</th><th>세척kg</th><th>세척</th><th>가열</th><th>포장수량</th><th>포장kg</th><th>포장</th><th>종합</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">이 기간에 출고된 로트가 없습니다.</div>`}</div>`}
+function spark(vals,std,label){
+  if(!vals.length)return"";const W=220,H=44,all=[...vals,...(num(std)?[num(std)]:[])],mn=Math.min(...all)-3,mx=Math.max(...all)+3;
+  const x=i=>vals.length===1?W/2:8+i*(W-16)/(vals.length-1),y=v=>H-4-(v-mn)/(mx-mn)*(H-10),last=vals[vals.length-1];
+  return `<div class="row" style="gap:6px;flex-wrap:nowrap"><span class="formula" style="width:30px">${label}</span>
+  <svg class="spark" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="${label} 수율 추이, 최근 ${last.toFixed(1)}%">
+  ${num(std)?`<line x1="0" x2="${W}" y1="${y(num(std))}" y2="${y(num(std))}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/>`:""}
+  <polyline points="${vals.map((v,i)=>x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--pen)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  <line x1="${x(vals.length-1)}" x2="${x(vals.length-1)}" y1="${y(last)}" y2="${y(last)}" stroke="var(--pen)" stroke-width="8" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+  <span class="formula pen" style="width:50px;text-align:right">${last.toFixed(1)}%</span></div>`}
+function emptyStart(){
+  return `<div class="card"><div class="empty" style="border:0"><p style="margin:0 0 6px;color:var(--ink);font-weight:600">아직 입력된 로트가 없습니다.</p>
+  <p style="margin:0 0 14px">‘① 원료육 출고’에서 첫 출고를 등록하면 세척·가열·포장 입력과 일지가 이어집니다.</p>
+  <div class="row" style="justify-content:center"><button class="btn primary" data-act="goto" data-v="release">출고 등록하기</button>${mode==="local"?`<button class="btn" data-act="loadSample">10/17~20 일지로 예시 채우기</button>`:""}</div></div></div>`}
+
+/* ───────── ① 출고 · 원료 입고 ───────── */
+const siteSelect=(id,v)=>`<select id="${id}">${sites().map(s=>`<option ${s===(v||UI.site||sites()[0])?"selected":""}>${esc(s)}</option>`).join("")}</select>`;
+const rawOpts=(sel,except)=>`<option value="">재고에서 고르지 않고 직접 입력</option>`+rawsArr().filter(r=>rawRemain(r,except)>0||r.id===sel).map(r=>`<option value="${r.id}" ${r.id===sel?"selected":""}>${esc(r.bl)} · ${esc(r.raw)} · 남은 ${fmtKg(rawRemain(r,except))}kg</option>`).join("");
+function rRelease(){
+  slot("relList",()=>UI.relMode==="raw"?rawList():relList());
+  const seg=`<div class="seg" role="group" aria-label="출고·입고"><button data-act="relMode" data-v="release" aria-pressed="${UI.relMode==="release"}">원료육 출고 (해동)</button><button data-act="relMode" data-v="raw" aria-pressed="${UI.relMode==="raw"}">원료 입고 · 재고</button></div>`;
+  if(UI.relMode==="raw")return `<div><h2>원료 입고 · 재고</h2><p class="lead">냉동창고에 들어온 원료를 B/L별로 등록하면, 출고할 때 골라 쓰고 남은 재고와 ‘원료 수불 대장’이 자동으로 계산됩니다.</p></div>${seg}
+   <div class="grid2"><div id="rawFormBox">${rawForm()}</div><div class="card"><h3>원료 재고</h3><div id="relList"></div></div></div>`;
+  const e=UI.editLot&&S.lots[UI.editLot],t=todayStr(),rd=e?e.releaseDate:t;
+  const raws=[...new Set(lotsArr().map(l=>l.raw).filter(Boolean))],origins=[...new Set(["캐나다산","미국산","스페인산",...lotsArr().map(l=>l.origin).filter(Boolean)])];
+  return `<div><h2>① 원료육 출고</h2><p class="lead">냉동창고에서 해동으로 내보낸 원료육을 이력번호(B/L)별로 등록합니다. 작업일지의 ‘해동·침수’ 칸이 여기서 채워집니다.</p></div>${seg}
+  <div class="grid2"><form class="card" id="relForm" autocomplete="off"><h3>${e?"출고 기록 수정":"새 출고 등록"}</h3>
+    <div class="fields">
+      <label class="f wide"><b>원료 선택 (입고 재고)</b><select id="r_rawSel">${rawOpts(e?e.rawId:"",e?e.id:"")}</select></label>
+      <label class="f"><b>사업장</b>${siteSelect("r_site",e?siteOf(e):"")}</label>
+      <label class="f"><b>출고일 (해동)</b><input type="date" id="r_date" value="${esc(rd)}" required></label>
+      <label class="f"><b>침수일</b><input type="date" id="r_soak" value="${esc(e?e.soakDate:addDays(rd,1))}"></label>
+      <label class="f"><b>세척 예정일</b><input type="date" id="r_plan" value="${esc(e?e.planWashDate:addDays(rd,2))}"></label>
+      <div class="f wide"><b>원료육 품명</b>${addSel("r_raw","raw",listOptions(rawNameList(),e?e.raw:"(돈막창)하이라이프"))}</div>
+      <label class="f wide"><b>이력번호 · B/L번호</b><input id="r_bl" inputmode="numeric" class="num" value="${esc(e?e.bl:"")}" placeholder="예: 905002407766" required></label>
+      <label class="f"><b>원료 소비기한</b><input type="date" id="r_exp" value="${esc(e?e.rawExpiry:"")}"></label>
+      <div class="f"><b>원산지</b>${addSel("r_origin","origin",listOptions(originList(),e?e.origin:"캐나다산"))}</div>
+      <label class="f"><b>출고 중량</b><span class="unit"><input id="r_kg" class="num big" inputmode="decimal" enterkeyhint="next" value="${esc(e?e.releaseKg:800)}" required><span>kg</span></span></label>
+      <div class="f wide"><b>작업할 제품 (주 제품)</b>${addSel("r_prod","product",prodOptions(e?e.productId:""))}</div>
+      <label class="f wide"><b>비고</b><input id="r_note" value="${esc(e?e.note||"":"")}"></label>
+    </div><div id="relPrev" style="margin-top:12px"></div>
+    <div class="row end" style="margin-top:14px">${e?`<button type="button" class="btn" data-act="cancelEdit">취소</button>`:""}<button class="btn primary" type="submit">${e?"수정 저장":"출고 등록"}</button></div></form>
+  <div class="card"><h3>출고 기록</h3><div id="relList"></div></div></div>`}
+rRelease.after=()=>{
+  if(UI.relMode==="raw"){bindRaw();return}
+  live.push(()=>{const s=$("#r_prod");if(s&&s.value!=="__add"){const v=s.value;s.innerHTML=prodOptions(v)+addOpt("product")}const r=$("#r_rawSel");if(r){const v=r.value;r.innerHTML=rawOpts(v,UI.editLot||"")}relPrev()});
+  $("#r_date").addEventListener("change",e=>{if(!UI.editLot){$("#r_soak").value=addDays(e.target.value,1);$("#r_plan").value=addDays(e.target.value,2)}});
+  $("#r_rawSel").addEventListener("change",e=>{const r=S.raws[e.target.value];if(!r)return;setSel("r_raw",r.raw);$("#r_bl").value=r.bl||"";$("#r_exp").value=r.rawExpiry||"";setSel("r_origin",r.origin);
+    const s=$("#r_site");if(s&&r.site)s.value=r.site;const rem=rawRemain(r,UI.editLot||"");if(!UI.editLot&&num($("#r_kg").value)>rem)$("#r_kg").value=rem;relPrev()});
+  $("#relForm").addEventListener("input",relPrev);
+  $("#relForm").addEventListener("submit",ev=>{ev.preventDefault();if(needWho())return;
+    const old=UI.editLot?S.lots[UI.editLot]:null,lot=old?clone(old):{createdAt:new Date().toISOString(),by:who()};
+    const kg=num($("#r_kg").value);if(!kg){toast("출고 중량을 숫자로 입력하세요");return}
+    if(!$("#r_prod").value||$("#r_prod").value==="__add"){toast(UI.isAdmin?"작업할 제품을 고르세요. 없으면 목록 맨 아래 ‘＋ 새 제품 추가’를 누르세요":"작업할 제품을 고르세요. 목록에 없으면 관리자에게 제품 등록을 요청하세요");return}
+    Object.assign(lot,{rawId:$("#r_rawSel").value||null,site:$("#r_site").value,releaseDate:$("#r_date").value,soakDate:$("#r_soak").value,planWashDate:$("#r_plan").value,raw:$("#r_raw").value.trim(),bl:$("#r_bl").value.trim(),rawExpiry:$("#r_exp").value,origin:$("#r_origin").value.trim(),releaseKg:kg,productId:$("#r_prod").value,note:$("#r_note").value.trim(),updatedAt:new Date().toISOString()});
+    if(!lot.bl){toast("이력번호(B/L)를 입력하세요");return}
+    const id=UI.editLot||uid("L");put("lots/"+id,lot);
+    logEvent(old?"출고 수정":"출고 등록",old?`B/L ${lot.bl} 출고 ${fmtKg(num(old.releaseKg))}→${fmtKg(kg)}kg`:`[${lot.site}] B/L ${lot.bl} ${lot.raw} ${fmtKg(kg)}kg → ${lotTitle(lot)}`,id);
+    toast(old?"수정했습니다":"출고를 등록했습니다");
+    if(old){UI.editLot=null;render()}else{$("#r_bl").value="";$("#r_exp").value="";$("#r_note").value="";$("#r_rawSel").innerHTML=rawOpts("","");$("#r_bl").focus()}})};
+function relPrev(){const el=$("#relPrev");if(!el)return;const p=prod(($("#r_prod")||{}).value),kg=num(($("#r_kg")||{}).value),r=S.raws[($("#r_rawSel")||{}).value];
+  let h="";if(r&&kg){const rem=rawRemain(r,UI.editLot||"");h+=kg>rem?`<ul class="warns" style="margin-bottom:10px"><li class="bad">재고 ${fmtKg(rem)}kg보다 많이 출고합니다. 입고 중량이나 출고 중량을 확인하세요.</li></ul>`:`<p class="formula" style="margin:0 0 10px">출고 후 남는 재고 ${fmtKg(rem-kg)}kg</p>`}
+  if(p&&kg){const ew=kg*(num(p.stdWash)||0)/100,cnt=Math.floor(ew*(num(p.stdPack)||0)/100/(num(p.sizeKg)||1));
+    h+=`<div class="calc"><div class="kpi"><div class="l">예상 세척 중량</div><div class="v">${fmt(ew,0)}<small>kg</small></div><div class="d">출고 × 기준 ${p.stdWash??"–"}%</div></div><div class="kpi"><div class="l">예상 생산 수량</div><div class="v">${cnt}<small>개</small></div><div class="d">× 포장 기준 ${p.stdPack??"–"}% ÷ ${p.sizeKg}kg</div></div></div>`}
+  el.innerHTML=h}
+function rawForm(){const e=UI.editRaw&&S.raws[UI.editRaw];
+  return `<form class="card" id="rawForm" autocomplete="off"><h3>${e?"입고 기록 수정":"원료 입고 등록"}</h3><div class="fields">
+   <label class="f"><b>입고일</b><input type="date" id="x_date" value="${esc(e?e.inDate:todayStr())}"></label>
+   <label class="f"><b>사업장</b>${siteSelect("x_site",e?siteOf(e):"")}</label>
+   <div class="f wide"><b>원료육 품명</b>${addSel("x_raw","raw",listOptions(rawNameList(),e?e.raw:"(돈막창)하이라이프"))}</div>
+   <label class="f wide"><b>이력번호 · B/L번호</b><input id="x_bl" class="num" inputmode="numeric" value="${esc(e?e.bl:"")}" required></label>
+   <div class="f"><b>원산지</b>${addSel("x_origin","origin",listOptions(originList(),e?e.origin:"캐나다산"))}</div>
+   <label class="f"><b>소비기한</b><input type="date" id="x_exp" value="${esc(e?e.rawExpiry:"")}"></label>
+   <label class="f"><b>입고 중량</b><span class="unit"><input id="x_kg" class="num big" inputmode="decimal" value="${esc(e?e.inKg:"")}" placeholder="0"><span>kg</span></span></label>
+   <label class="f"><b>거래처</b><input id="x_sup" value="${esc(e?e.supplier||"":"")}"></label>
+   <label class="f wide"><b>비고</b><input id="x_note" value="${esc(e?e.note||"":"")}"></label></div>
+   <div class="row end" style="margin-top:14px">${e?`<button type="button" class="btn" data-act="cancelRaw">취소</button>`:""}<button class="btn primary" type="submit">${e?"수정 저장":"입고 등록"}</button></div></form>`}
+function bindRaw(){const f=$("#rawForm");if(!f)return;f.addEventListener("submit",ev=>{ev.preventDefault();if(needWho())return;
+  const kg=num($("#x_kg").value),bl=$("#x_bl").value.trim();if(!bl||!kg){toast("B/L번호와 입고 중량을 입력하세요");return}
+  const old=UI.editRaw&&S.raws[UI.editRaw],r={...(old?clone(old):{createdAt:new Date().toISOString(),by:who()}),inDate:$("#x_date").value,site:$("#x_site").value,raw:$("#x_raw").value.trim(),bl,origin:$("#x_origin").value.trim(),rawExpiry:$("#x_exp").value,inKg:kg,supplier:$("#x_sup").value.trim(),note:$("#x_note").value.trim()};
+  if(!old&&Object.values(S.raws).some(x=>!x.deleted&&x.bl===bl)){toast("이미 입고된 B/L입니다. 재고 목록에서 수정하세요");return}
+  const id=UI.editRaw||uid("R");put("raws/"+id,r);logEvent(old?"입고 수정":"원료 입고",`[${r.site}] B/L ${bl} ${r.raw} ${old?fmtKg(num(old.inKg))+"→":""}${fmtKg(kg)}kg`,id);
+  toast(old?"수정했습니다":"입고를 등록했습니다");UI.editRaw=null;$("#rawFormBox").innerHTML=rawForm();bindRaw()})}
+function rawList(){const R=rawsArr(),low=num(S.cfg.lowStock)||0,soon=addDays(todayStr(),30);
+  if(!R.length)return `<div class="empty">입고된 원료가 없습니다. 왼쪽에서 등록하세요. 등록하지 않은 원료도 출고는 직접 입력으로 할 수 있습니다.</div>`;
+  const tot={};R.forEach(r=>{const x=Math.max(0,rawRemain(r));tot[r.raw]=(tot[r.raw]||0)+x});
+  return `<div class="row" style="margin-bottom:10px">${Object.entries(tot).map(([k,v])=>`<span class="chip s2" style="font-size:13px">${esc(k)} ${fmtKg(v)}kg</span>`).join("")}</div>
+  <div class="lotlist">${R.map(r=>{const rem=rawRemain(r),used=rawUsed(r.id);const st=rem<=0?`<span class="chip">소진</span>`:rem<low?`<span class="chip s1">부족</span>`:`<span class="chip s3">재고</span>`;
+    return `<div class="lot" style="cursor:default"><div class="t">${esc(r.bl)} · ${esc(r.raw)}</div><div>${st}${r.rawExpiry&&r.rawExpiry<=soon&&rem>0?` <span class="chip bad">소비기한 임박</span>`:""}</div>
+    <div class="m">[${esc(siteOf(r))}] 입고 ${esc(r.inDate)} ${fmtKg(num(r.inKg))}kg · 출고 ${fmtKg(used)}kg · <b class="pen">남은 ${fmtKg(rem)}kg</b> · ${esc(r.origin||"")} · 소비기한 ${esc(r.rawExpiry||"–")}</div>
+    <div class="row" style="grid-column:1/-1"><button class="btn small" data-act="editRaw" data-id="${r.id}">수정</button>${delBtn(r.id,"raw","이 입고 기록을 삭제할까요?")}</div></div>`}).join("")}</div>`}
+function relList(){
+  const L=lotsArr();if(!L.length)return `<div class="empty">출고 기록이 없습니다. 왼쪽에서 첫 출고를 등록하세요.</div>`;
+  return `<div class="lotlist">${L.slice(0,40).map(l=>{const c=calc(l);return `<div class="lot" style="cursor:default">
+    <div class="t">${esc(l.bl)} · ${esc(lotTitle(l))}</div><div><span class="chip ${c.stageCls}">${c.stageLabel}</span></div>
+    <div class="m">${esc(l.releaseDate)} 출고 ${fmtKg(c.rel)}kg · ${esc(l.raw)} · ${esc(l.origin)}${l.note?" · "+esc(l.note):""}</div>
+    <div class="row" style="grid-column:1/-1"><button class="btn small" data-act="editLot" data-id="${l.id}">수정</button>${delBtn(l.id,"lot","이 로트와 연결된 포장 기록을 삭제할까요? (관리자 화면에서 되살릴 수 있습니다)")}</div></div>`}).join("")}</div>`}
+
+/* ───────── 로트 선택 공통 ───────── */
+function picker(kind){
+  const sd=UI.showDone[kind];
+  const okStage={wash:s=>s==="wash",heat:s=>s==="heat",pack:s=>s==="heat"||s==="pack"||s==="packing"}[kind];
+  const doneStage={wash:s=>s!=="wash",heat:(s,l)=>s!=="wash"&&s!=="heat"&&prod(l.productId)?.needsHeat,pack:s=>s==="done"}[kind];
+  let items;
+  if(kind==="wash")items=lotsArr().map(l=>({u:{key:l.id,ids:[l.id],lot:l},c:calc(l)}));
+  else items=unitsOf(lotsArr()).map(u=>({u,c:calcUnit(u.ids)}));
+  items=items.filter(({u,c})=>okStage(c.stage)||(sd&&doneStage(c.stage,u.lot)));
+  const selected=kind==="wash"?UI.washSel:keyIds(kind==="heat"?UI.heatUnit:UI.packUnit);
+  const label={wash:"세척할 로트",heat:"가열할 로트",pack:"포장할 로트"}[kind],doneL={wash:"세척 끝난 로트도 보기",heat:"가열 끝난 로트도 보기",pack:"포장 완료도 보기"}[kind];
+  const head=`<div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">${label}</h3>
+    <label class="row" style="font-size:13px;color:var(--muted);gap:6px"><input type="checkbox" data-act="showDone" data-k="${kind}" ${sd?"checked":""} style="width:auto">${doneL}</label></div>
+    ${kind==="wash"?`<label class="row multi" style="gap:8px;margin-bottom:10px;font-size:14px"><input type="checkbox" data-act="washMulti" ${UI.washMulti?"checked":""} style="width:auto"> 여러 로트(B/L)를 함께 세척</label>`:""}`;
+  const empty={wash:"세척 대기 중인 로트가 없습니다. ‘① 원료육 출고’에서 먼저 등록하세요.",heat:"가열을 기다리는 로트가 없습니다. 가열 제품은 ‘기준·백업’에서 ‘가열’로 표시된 제품입니다.",pack:"세척이 끝난 로트가 없습니다. ‘② 세척 중량’을 먼저 입력하세요."}[kind];
+  if(!items.length)return head+`<div class="empty">${empty}</div>`;
+  return head+`<div class="lotlist">${items.map(({u,c})=>{const on=u.ids.every(id=>selected.includes(id));return `<button type="button" class="lot" data-act="pick" data-k="${kind}" data-v="${esc(u.key)}" aria-pressed="${on}">
+    <span class="t">${kind==="wash"&&UI.washMulti?`<span class="ck" aria-hidden="true">${on?"✓":""}</span>`:""}${esc(kind==="wash"?lotTitle(u.lot):unitTitle(u))}</span><span><span class="chip ${c.stageCls}">${c.stageLabel}</span></span>
+    <span class="m">B/L ${esc(kind==="wash"?u.lot.bl:unitBL(u))} · 출고 ${esc(u.lot.releaseDate)} ${fmtKg(c.rel)}kg${c.wash!=null?` · 세척 ${fmtKg(c.wash)}kg`:""}${c.group&&kind==="wash"?" · 묶음":""}</span></button>`}).join("")}</div>`}
+
+/* ───────── ② 세척 ───────── */
+function rWash(){UI.washSel=UI.washSel.filter(id=>S.lots[id]&&!S.lots[id].deleted);slot("washPick",()=>picker("wash"));
+  return `<div><h2>② 세척 중량 입력</h2><p class="lead">현장에서 저울에 단 해동 후·세척 후 중량을 넣으면 세척 수율이 바로 계산됩니다. 여러 B/L을 한꺼번에 세척했다면 ‘함께 세척’을 켜고 합계 중량을 넣으세요.</p></div>
+  <div class="grid2"><div class="card" id="washPick"></div><div id="washForm">${washForm()}</div></div>`}
+function washExisting(lots){const ids=lots.map(l=>l.id).sort().join("+");
+  if(lots.length>1){const g=lots[0].wash&&lots[0].wash.group;if(g&&g.lotIds.slice().sort().join("+")===ids)return {...lots[0].wash,thawKg:g.thawKg,kg:g.kg,aKg:g.aKg,fatKg:g.fatKg,wasteKg:g.wasteKg,group:g};return null}
+  return lots[0].wash||null}
+function washForm(){
+  const lots=UI.washSel.map(id=>S.lots[id]).filter(Boolean);
+  if(!lots.length)return `<div class="card"><div class="empty">왼쪽에서 로트를 고르세요.${UI.washMulti?" 함께 세척한 로트를 모두 누르세요.":""}</div></div>`;
+  const w=washExisting(lots)||{},p=prod(lots[0].productId),rel=sum(lots,l=>num(l.releaseKg)),multi=lots.length>1;
+  const mixed=new Set(lots.map(l=>l.productId)).size>1;
+  return `<form class="card" id="wForm" autocomplete="off"><h3>${multi?`함께 세척 · ${lots.length}개 로트`:esc(lotTitle(lots[0]))}</h3>
+   <p class="formula" style="margin:-4px 0 12px">${lots.map(l=>`B/L ${esc(l.bl)} (${fmtKg(num(l.releaseKg))}kg)`).join(" · ")} · 출고 합계 <b class="pen">${fmtKg(rel)}kg</b> · 기준 세척 수율 ${p&&p.stdWash!=null?p.stdWash+"%":"–"}${w.by?` · 마지막 입력 ${esc(w.by)}`:""}</p>
+   ${mixed?`<p class="banner" style="margin:0 0 12px">제품이 다른 로트를 묶었습니다. 기준 수율은 첫 로트(${esc(lotTitle(lots[0]))}) 기준으로 비교합니다.</p>`:""}
+   <div class="fields">
+    <label class="f"><b>세척일</b><input type="date" id="w_date" value="${esc(w.date||todayStr())}"></label>
+    <label class="f"><b>해동 후 중량${multi?" (합계)":""}</b><span class="unit"><input id="w_thaw" class="num big" inputmode="decimal" enterkeyhint="next" value="${esc(w.thawKg!=null?+(+w.thawKg).toFixed(2):"")}" placeholder="0"><span>kg</span></span></label>
+    <label class="f"><b>세척 후 중량${multi?" (합계)":""}</b><span class="unit"><input id="w_kg" class="num big" inputmode="decimal" enterkeyhint="next" value="${esc(w.kg!=null?+(+w.kg).toFixed(2):"")}" placeholder="0"><span>kg</span></span></label>
+    <label class="f"><b>A막창</b><span class="unit"><input id="w_a" class="num" inputmode="decimal" enterkeyhint="next" value="${esc(w.aKg??"")}"><span>kg</span></span></label>
+    <label class="f"><b>지방</b><span class="unit"><input id="w_fat" class="num" inputmode="decimal" enterkeyhint="next" value="${esc(w.fatKg??"")}"><span>kg</span></span></label>
+    <label class="f"><b>폐기 막창</b><span class="unit"><input id="w_waste" class="num" inputmode="decimal" enterkeyhint="next" value="${esc(w.wasteKg??"")}"><span>kg</span></span></label>
+   </div>${multi?`<p class="formula" style="margin:10px 0 0">합계 중량은 출고 중량 비율로 각 로트에 나눠 기록됩니다. 일지에는 로트별로 나뉜 값이 들어갑니다.</p>`:""}
+   <div id="wPrev" style="margin-top:14px"></div>
+   <div class="row end" style="margin-top:14px">${w.group?(UI.confirm==="ungroup"?`<span class="confirm">묶음을 풀면 세척 기록이 지워져 다시 입력해야 합니다. <button type="button" class="btn small danger" data-act="ungroup">묶음 풀기</button><button type="button" class="btn small" data-act="noConfirm">취소</button></span>`:`<button type="button" class="btn" data-act="askDel" data-id="ungroup">묶음 풀기</button>`):""}<button class="btn primary" type="submit">${washExisting(lots)?"세척 중량 수정":"세척 중량 저장"}</button></div></form>`}
+function readWash(){return {date:$("#w_date").value,thawKg:num($("#w_thaw").value),kg:num($("#w_kg").value),aKg:num($("#w_a").value),fatKg:num($("#w_fat").value),wasteKg:num($("#w_waste").value)}}
+function wPrev(){const el=$("#wPrev");if(!el)return;const lots=UI.washSel.map(id=>S.lots[id]).filter(Boolean);if(!lots.length)return;const w=readWash(),p=prod(lots[0].productId);
+  const o=ratios({rel:sum(lots,l=>num(l.releaseKg)),thaw:w.thawKg,wash:w.kg,heatIn:null,heatOut:null,packKg:0,qty:0,remainKg:0,wasteKg:0,sauceKg:0,nPacks:0});
+  const ws=warnings({...lots[0],id:"__tmp",wash:{...w},heat:null},o),d=o.washYield!=null&&p&&num(p.stdWash)?o.washYield*100-p.stdWash:null;
+  el.innerHTML=`<div class="calc"><div class="kpi ${kcls(o.washYield,p?.stdWash)}"><div class="l">세척 수율</div><div class="v">${pct(o.washYield)}</div><div class="d">세척 ÷ 해동${d!=null?` · 기준 대비 ${d>0?"+":""}${d.toFixed(1)}%p`:""}</div></div>
+  <div class="kpi"><div class="l">출고 대비</div><div class="v">${pct(o.washVsRel)}</div><div class="d">세척 ÷ 출고 ${fmtKg(o.rel)}kg</div></div>
+  <div class="kpi"><div class="l">작업일지 ‘세척중량’</div><div class="v">${o.washYield!=null?fmt(o.rel*o.washYield,0):"–"}<small>kg</small></div><div class="d">원육 × 수율 (환산)</div></div></div>${warnList(ws)}`}
+function bindWash(){const f=$("#wForm");if(!f)return;wPrev();f.addEventListener("input",wPrev);
+  f.addEventListener("submit",ev=>{ev.preventDefault();if(needWho())return;const w=readWash();
+    if(w.kg==null||w.thawKg==null){toast("해동 후 중량과 세척 후 중량을 모두 입력하세요");return}
+    const lots=UI.washSel.map(id=>S.lots[id]).filter(Boolean),old=washExisting(lots),rel=sum(lots,l=>num(l.releaseKg)),now=new Date().toISOString();
+    if(lots.length===1){const l=clone(lots[0]);l.wash={...w,by:who(),at:now};put("lots/"+l.id,l,true)}
+    else{const gid=(old&&old.group&&old.group.id)||uid("G"),ids=lots.map(l=>l.id),sc=(v,s)=>v==null?null:Math.round(v*s*1000)/1000;
+      lots.forEach(l0=>{const l=clone(l0),s=(num(l.releaseKg)||0)/rel;l.wash={date:w.date,by:who(),at:now,thawKg:sc(w.thawKg,s),kg:sc(w.kg,s),aKg:sc(w.aKg,s),fatKg:sc(w.fatKg,s),wasteKg:sc(w.wasteKg,s),group:{id:gid,lotIds:ids,thawKg:w.thawKg,kg:w.kg,aKg:w.aKg,fatKg:w.fatKg,wasteKg:w.wasteKg}};put("lots/"+l.id,l,true)})}
+    const bls=lots.map(l=>l.bl).join("+");
+    logEvent(old?"세척 수정":"세척 저장",`B/L ${bls} 해동 ${old?fmtKg(num(old.thawKg))+"→":""}${fmtKg(w.thawKg)} · 세척 ${old?fmtKg(num(old.kg))+"→":""}${fmtKg(w.kg)}kg (${pct(w.kg/w.thawKg)})`,lots[0].id);
+    toast("세척 중량을 저장했습니다 · 세척 수율 "+pct(w.kg/w.thawKg));UI.washSel=[];UI.washMulti=false;refresh();$("#washForm").innerHTML=washForm()})}
+rWash.after=bindWash;
+
+/* ───────── ③ 가열 ───────── */
+function rHeat(){if(UI.heatUnit&&!keyIds(UI.heatUnit).every(id=>S.lots[id]))UI.heatUnit=null;slot("heatPick",()=>picker("heat"));
+  return `<div><h2>③ 가열 후 중량 <span class="chip">가열 제품만</span></h2><p class="lead">훈제·초벌처럼 가열하는 제품의 2차 수율입니다. 가열 전·후 중량을 재서 넣으세요. 가열하지 않는 제품은 이 단계를 건너뜁니다.</p></div>
+  <div class="grid2"><div class="card" id="heatPick"></div><div id="heatForm">${heatForm()}</div></div>`}
+function heatForm(){
+  const ids=keyIds(UI.heatUnit);if(!ids.length)return `<div class="card"><div class="empty">왼쪽에서 로트를 고르세요.</div></div>`;
+  const o=calcUnit(ids),l=o.lots[0],p=prod(l.productId),h0=l.heat||{},h=h0.group?{...h0,inKg:h0.group.inKg,outKg:h0.group.outKg}:h0;
+  return `<form class="card" id="hForm" autocomplete="off"><h3>${esc(unitTitle({ids,lot:l}))}</h3>
+   <p class="formula" style="margin:-4px 0 12px">B/L ${esc(unitBL({ids}))} · 세척 <b class="pen">${fmtKg(o.wash)}kg</b> · 기준 가열 수율 ${p&&p.stdHeat!=null?p.stdHeat+"%":"미정"}${h.by?` · 마지막 입력 ${esc(h.by)}`:""}</p>
+   <div class="fields">
+    <label class="f"><b>가열일</b><input type="date" id="h_date" value="${esc(h.date||todayStr())}"></label>
+    <label class="f"><b>가열 전 중량</b><span class="unit"><input id="h_in" class="num big" inputmode="decimal" enterkeyhint="next" value="${esc(h.inKg!=null?+(+h.inKg).toFixed(2):(o.wash!=null?+o.wash.toFixed(2):""))}"><span>kg</span></span></label>
+    <label class="f"><b>가열 후 중량</b><span class="unit"><input id="h_out" class="num big" inputmode="decimal" enterkeyhint="next" value="${esc(h.outKg!=null?+(+h.outKg).toFixed(2):"")}" placeholder="0"><span>kg</span></span></label>
+    <label class="f"><b>시작</b><input type="time" id="h_start" value="${esc(h.start||"")}"></label>
+    <label class="f"><b>종료</b><input type="time" id="h_end" value="${esc(h.end||"")}"></label>
+   </div><p class="formula" style="margin:8px 0 0">가열 전 중량에는 양념을 버무린 뒤라면 양념 무게가 포함됩니다. 기본값은 세척 중량입니다.</p>
+   <div id="hPrev" style="margin-top:14px"></div>
+   <div class="row end" style="margin-top:14px"><button class="btn primary" type="submit">${h.outKg!=null?"가열 중량 수정":"가열 중량 저장"}</button></div></form>`}
+function readHeat(){return {date:$("#h_date").value,inKg:num($("#h_in").value),outKg:num($("#h_out").value),start:$("#h_start").value,end:$("#h_end").value}}
+function hPrev(){const el=$("#hPrev");if(!el)return;const ids=keyIds(UI.heatUnit),l=S.lots[ids[0]],p=prod(l.productId),h=readHeat();
+  const y=h.inKg&&h.outKg?h.outKg/h.inKg:null,o=calcUnit(ids);
+  const ws=[];if(y!=null&&(y>1.2||y<0.4))ws.push({lv:"bad",t:`가열 후 중량이 가열 전의 ${pct(y)} — 숫자를 확인하세요`});
+  if(y!=null&&p&&num(p.stdHeat)){const d=y*100-p.stdHeat,t=num(S.cfg.tol)||10;if(Math.abs(d)>t)ws.push({lv:Math.abs(d)>t*2?"bad":"warn",t:`가열 수율 ${pct(y)} — 기준 ${p.stdHeat}%보다 ${d>0?"+":""}${d.toFixed(1)}%p`})}
+  if(h.inKg&&o.wash&&h.inKg>o.wash*1.5)ws.push({lv:"bad",t:"가열 전 중량이 세척 중량보다 50% 이상 많습니다"});
+  el.innerHTML=`<div class="calc"><div class="kpi ${kcls(y,p?.stdHeat)}"><div class="l">가열 수율 (2차)</div><div class="v">${pct(y)}</div><div class="d">가열 후 ÷ 가열 전</div></div>
+  <div class="kpi"><div class="l">가열 감량</div><div class="v">${h.inKg&&h.outKg?fmt(h.inKg-h.outKg,1):"–"}<small>kg</small></div><div class="d">가열 전 − 가열 후</div></div>
+  <div class="kpi"><div class="l">세척 대비</div><div class="v">${pct(h.outKg&&o.wash?h.outKg/o.wash:null)}</div><div class="d">가열 후 ÷ 세척 ${fmtKg(o.wash)}kg</div></div></div>${warnList(ws)}`}
+function bindHeat(){const f=$("#hForm");if(!f)return;hPrev();f.addEventListener("input",hPrev);
+  f.addEventListener("submit",ev=>{ev.preventDefault();if(needWho())return;const h=readHeat();if(h.inKg==null||h.outKg==null){toast("가열 전·후 중량을 모두 입력하세요");return}
+    const ids=keyIds(UI.heatUnit),lots=ids.map(id=>S.lots[id]),old=lots[0].heat,tot=sum(lots,l=>num(l.wash?.kg)),now=new Date().toISOString();
+    lots.forEach(l0=>{const l=clone(l0),s=ids.length>1&&tot?(num(l.wash?.kg)||0)/tot:1;
+      l.heat={date:h.date,start:h.start,end:h.end,by:who(),at:now,inKg:Math.round(h.inKg*s*1000)/1000,outKg:Math.round(h.outKg*s*1000)/1000};
+      if(ids.length>1)l.heat.group={lotIds:ids,inKg:h.inKg,outKg:h.outKg};put("lots/"+l.id,l,true)});
+    const oo=old?(old.group||old):null;
+    logEvent(old?"가열 수정":"가열 저장",`B/L ${lots.map(l=>l.bl).join("+")} 가열 전 ${oo?fmtKg(num(oo.inKg))+"→":""}${fmtKg(h.inKg)} · 후 ${oo?fmtKg(num(oo.outKg))+"→":""}${fmtKg(h.outKg)}kg (${pct(h.outKg/h.inKg)})`,ids[0]);
+    toast("가열 중량을 저장했습니다 · 가열 수율 "+pct(h.outKg/h.inKg));UI.heatUnit=null;refresh();$("#heatForm").innerHTML=heatForm()})}
+rHeat.after=bindHeat;
+
+/* ───────── ④ 포장 ───────── */
+function rPack(){if(UI.packUnit&&!keyIds(UI.packUnit).every(id=>S.lots[id]&&!S.lots[id].deleted))UI.packUnit=null;
+  slot("packSide",()=>UI.packMode==="lot"?picker("pack"):freeList());slot("packSum",packSummary);
+  return `<div><h2>④ 포장 수량 · 잔량 · 폐기</h2><p class="lead">제품 1차 수량 확인용 클립보드와 같은 항목입니다. 수량을 넣으면 중량과 포장 수율이 자동 계산됩니다.</p></div>
+  <div class="seg" role="group" aria-label="기록 방식"><button data-act="packMode" data-v="lot" aria-pressed="${UI.packMode==="lot"}">원료 로트로 포장</button><button data-act="packMode" data-v="free" aria-pressed="${UI.packMode==="free"}">로트 없이 수량만 (참숯골·완산벌 등)</button></div>
+  <div class="grid2"><div class="card" id="packSide"></div><div style="display:grid;gap:18px"><div id="packSum"></div><div id="packForm">${packForm()}</div></div></div>`}
+function packRow(pk,showLot){return `<div class="packrow"><div><b>${esc(pk.productName)}</b> <span class="pen" style="font-family:var(--f-num)">${pk.qty}ea</span>${pk.edited?` <span class="chip">수정됨</span>`:""}</div>
+  <div class="row" style="gap:6px"><button class="btn small" data-act="editPack" data-id="${pk.id}">수정</button>${delBtn(pk.id,"pack")}</div>
+  <div class="m" style="grid-column:1/-1">${esc(pk.date)} ${esc(pk.start||"")}${pk.end?"~"+esc(pk.end):""} · ${fmt(pk.qty*pk.sizeKg,1)}kg · 잔량 ${fmt(num(pk.remainG)||0,0)}g · 폐기 ${fmt(num(pk.wasteG)||0,0)}g · 소비기한 ${esc(pk.expiry||"–")}${pk.sauceKg?` · ${esc(pk.sauceName)} ${pk.sauceKg}kg`:""}${pk.by?` · ${esc(pk.by)}`:""}${showLot&&packIds(pk).length?` · B/L ${esc(packIds(pk).map(i=>S.lots[i]?.bl||"").join("+"))}`:""}</div></div>`}
+function packSummary(){
+  if(UI.packMode!=="lot")return"";const ids=keyIds(UI.packUnit);if(!ids.length)return"";
+  const o=calcUnit(ids),l=o.lots[0],p=prod(l.productId),packs=packsOfUnit(ids);
+  return `<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${esc(unitTitle({ids,lot:l}))}</h3><span class="chip ${o.stageCls}">${o.stageLabel}</span></div>
+  <p class="formula" style="margin:4px 0 12px">B/L ${esc(unitBL({ids}))} · 해동 ${fmtKg(o.thaw)}kg → 세척 <b class="pen">${fmtKg(o.wash)}kg</b> (${pct(o.washYield)})${o.heatOut!=null?` → 가열 후 ${fmtKg(o.heatOut)}kg (${pct(o.heatYield)})`:""}</p>
+  <div class="calc"><div class="kpi"><div class="l">포장 합계</div><div class="v">${Math.round(o.qty)}<small>ea</small></div><div class="d">${fmt(o.packKg,1)}kg</div></div>
+  <div class="kpi ${kcls(o.packYield,p?.stdPack)}"><div class="l">포장 수율</div><div class="v">${pct(o.packYield)}</div><div class="d">(포장+잔량+폐기) ÷ 세척</div></div>
+  <div class="kpi"><div class="l">양품 수율</div><div class="v">${pct(o.goodYield)}</div><div class="d">포장 ÷ 세척</div></div>
+  <div class="kpi"><div class="l">종합 수율</div><div class="v">${pct(o.totalYield)}</div><div class="d">포장 ÷ 출고</div></div></div>
+  ${packs.length?`<div style="display:grid;gap:8px;margin-top:12px">${packs.map(pk=>packRow(pk)).join("")}</div>`:""}${warnList(o.warns)}
+  <label class="row" style="margin-top:12px;font-size:14px;gap:8px"><input type="checkbox" data-act="packDone" ${l.packDone?"checked":""} style="width:auto"> 이 로트 포장 완료 (잔량 정리 끝)</label></div>`}
+function freeList(){const L=packsArr().filter(p=>!packIds(p).length).slice(0,30);
+  return `<h3>로트 없이 기록한 수량</h3><p class="formula" style="margin:-6px 0 10px">수율은 계산하지 않고 생산 수량과 ‘수량 확인표’에만 들어갑니다.</p>${L.length?`<div style="display:grid;gap:8px">${L.map(pk=>packRow(pk)).join("")}</div>`:`<div class="empty">아직 기록이 없습니다.</div>`}`}
+function packForm(){
+  const free=UI.packMode==="free",ids=keyIds(UI.packUnit),pk=UI.editPack&&S.packs[UI.editPack];
+  if(!free&&!ids.length&&!pk)return `<div class="card"><div class="empty">왼쪽에서 세척이 끝난 로트를 고르세요.</div></div>`;
+  const l=ids.length?S.lots[ids[0]]:null,pid=pk?pk.productId:(l?l.productId:""),p=prod(pid),d=pk?pk.date:todayStr();
+  return `<form class="card" id="pForm" autocomplete="off"><h3>${pk?"포장 기록 수정":free?"수량 기록 추가":"포장 기록 추가"}</h3>
+  ${!free&&!pk?`<p class="formula" style="margin:-4px 0 10px">이 로트에서 나온 다른 제품(예: A막창)도 제품만 바꿔 같은 방법으로 기록하세요.</p>`:""}
+  <div class="fields">
+   <label class="f"><b>포장일</b><input type="date" id="p_date" value="${esc(d)}"></label>
+   <div class="f wide"><b>제품</b>${addSel("p_prod","product",prodOptions(pid))}</div>
+   <label class="f"><b>소비기한</b><input type="date" id="p_exp" value="${esc(pk?pk.expiry:(p?addDays(d,num(p.expiryDays)||0):""))}"></label>
+   <label class="f"><b>포장 수량</b><span class="unit"><input id="p_qty" class="num big" inputmode="numeric" enterkeyhint="next" value="${esc(pk?pk.qty:"")}" placeholder="0"><span>ea</span></span></label>
+   <label class="f"><b>잔량</b><span class="unit"><input id="p_rem" class="num" inputmode="decimal" enterkeyhint="next" value="${esc(pk?pk.remainG??"":"")}" placeholder="0"><span>g</span></span></label>
+   <label class="f"><b>폐기</b><span class="unit"><input id="p_waste" class="num" inputmode="decimal" enterkeyhint="next" value="${esc(pk?pk.wasteG??"":"")}" placeholder="0"><span>g</span></span></label>
+   ${free?`<label class="f"><b>사업장</b>${siteSelect("p_site",pk?packSite(pk):"")}</label>`:""}
+   <label class="f"><b>(중포)시간 시작</b><input type="time" id="p_start" value="${esc(pk?pk.start||"":"")}"></label>
+   <label class="f"><b>종료</b><input type="time" id="p_end" value="${esc(pk?pk.end||"":"")}"></label>
+   ${free?"":`<label class="f wide"><b>양념소스</b><input id="p_sauce" value="${esc(pk?pk.sauceName||"":(p?.sauce||""))}"></label>
+   <label class="f"><b>소스 투입량</b><span class="unit"><input id="p_sauceKg" class="num" inputmode="decimal" enterkeyhint="next" value="${esc(pk?pk.sauceKg??"":"")}" placeholder="0"><span>kg</span></span></label>
+   <label class="f"><b>소스 소비기한</b><input type="date" id="p_sauceExp" value="${esc(pk?pk.sauceExpiry||"":"")}"></label>`}
+  </div><div id="pPrev" style="margin-top:14px"></div>
+  <div class="row end" style="margin-top:14px">${pk?`<button type="button" class="btn" data-act="cancelPack">취소</button>`:""}<button class="btn primary" type="submit">${pk?"수정 저장":free?"수량 기록":"포장 기록 추가"}</button></div></form>`}
+function readPack(){const p=prod($("#p_prod").value),g=id=>$(id)?$(id).value:"";
+  return {date:g("#p_date"),productId:g("#p_prod"),productName:p?p.name:"",sizeKg:p?num(p.sizeKg):0,origin:p?p.origin||"":"",qty:num(g("#p_qty")),remainG:num(g("#p_rem")),wasteG:num(g("#p_waste")),expiry:g("#p_exp"),start:g("#p_start"),end:g("#p_end"),sauceName:g("#p_sauce").trim(),sauceKg:num(g("#p_sauceKg")),sauceExpiry:g("#p_sauceExp"),...($("#p_site")?{site:$("#p_site").value}:{})}}
+function pPrev(){const el=$("#pPrev");if(!el)return;const pk=readPack();if(!pk.qty){el.innerHTML=`<p class="formula">수량을 넣으면 ${UI.packMode==="free"?"중량이":"이 기록을 더한 수율이"} 보입니다.</p>`;return}
+  const kg=pk.qty*(pk.sizeKg||0);
+  if(UI.packMode==="free"||!UI.packUnit){el.innerHTML=`<div class="calc"><div class="kpi"><div class="l">포장 중량</div><div class="v">${fmt(kg,1)}<small>kg</small></div><div class="d">${pk.qty}ea × ${pk.sizeKg}kg</div></div></div>`;return}
+  const ids=keyIds(UI.packUnit),o=calcUnit(ids),p=prod(S.lots[ids[0]].productId);
+  const others=packsOfUnit(ids).filter(x=>x.id!==UI.editPack),acc=sum(others,x=>(num(x.qty)||0)*(num(x.sizeKg)||0)+(num(x.remainG)||0)/1000+(num(x.wasteG)||0)/1000)+kg+(pk.remainG||0)/1000+(pk.wasteG||0)/1000;
+  const y=o.wash?acc/o.wash:null,sauce=sum(others,x=>num(x.sauceKg))+(pk.sauceKg||0),ws=[];
+  if(o.wash!=null&&acc>(o.wash+sauce)*1.25)ws.push({lv:"bad",t:`포장+잔량+폐기 ${fmt(acc)}kg이 투입 ${fmt(o.wash+sauce)}kg보다 많습니다 — 수량을 확인하세요`});
+  if((pk.remainG||0)>50000||(pk.wasteG||0)>50000)ws.push({lv:"warn",t:"잔량·폐기는 g 단위입니다. kg으로 넣지 않았는지 확인하세요"});
+  el.innerHTML=`<div class="calc"><div class="kpi"><div class="l">이번 포장 중량</div><div class="v">${fmt(kg,1)}<small>kg</small></div><div class="d">${pk.qty}ea × ${pk.sizeKg}kg</div></div>
+  <div class="kpi ${kcls(y,p?.stdPack)}"><div class="l">${UI.editPack?"수정 후":"추가 후"} 포장 수율</div><div class="v">${pct(y)}</div><div class="d">${fmt(acc,1)}kg ÷ 세척 ${fmtKg(o.wash)}kg</div></div></div>${warnList(ws)}`}
+function bindPack(){const f=$("#pForm");if(!f)return;pPrev();f.addEventListener("input",pPrev);
+  const upExp=()=>{const p=prod($("#p_prod").value);if(p){$("#p_exp").value=num(p.expiryDays)?addDays($("#p_date").value,num(p.expiryDays)):"";const s=$("#p_sauce");if(s&&!s.value)s.value=p.sauce||""}};
+  $("#p_date").addEventListener("change",upExp);$("#p_prod").addEventListener("change",upExp);
+  f.addEventListener("submit",ev=>{ev.preventDefault();if(needWho())return;const v=readPack();if(!v.qty){toast("포장 수량을 입력하세요");return}if(!v.productId){toast("제품을 고르세요");return}
+    const old=UI.editPack&&S.packs[UI.editPack],now=new Date().toISOString();let rec;
+    if(old)rec={...clone(old),...v,edited:true,editedBy:who(),updatedAt:now};
+    else{const ids=UI.packMode==="free"?[]:keyIds(UI.packUnit);rec={...v,site:v.site||(ids[0]?siteOf(S.lots[ids[0]]):(UI.site||sites()[0])),lotIds:ids,lotId:ids[0]||null,by:who(),createdAt:now}}
+    const id=UI.editPack||uid("pk");put("packs/"+id,rec);
+    const blTxt=packIds(rec).length?` (B/L ${packIds(rec).map(i=>S.lots[i]?.bl||"").join("+")})`:" (로트 없음)";
+    logEvent(old?"포장 수정":"포장 추가",old?`${v.productName} 수량 ${old.qty}→${v.qty}ea · 잔량 ${old.remainG??0}→${v.remainG??0}g · 폐기 ${old.wasteG??0}→${v.wasteG??0}g${blTxt}`:`${v.productName} ${v.qty}ea · 잔량 ${v.remainG??0}g · 폐기 ${v.wasteG??0}g${blTxt}`,id);
+    toast(old?"포장 기록을 수정했습니다":`${v.productName} ${v.qty}ea 기록했습니다`);UI.editPack=null;$("#packForm").innerHTML=packForm();bindPack()})}
+rPack.after=bindPack;
+
+/* ───────── 일지 ───────── */
+function rDocs(){slot("docOut",docOut);
+  return `<div><h2>일지 출력</h2><p class="lead">①~④ 입력값으로 회사 양식 그대로 만들어집니다. 파란 글씨는 현장에서 입력된 값입니다. 파일로 저장해 열면 인쇄할 수 있습니다.</p></div>
+  <div class="card" style="display:grid;gap:12px">
+   <div class="row"><div class="seg" role="group" aria-label="일지 종류">${[["order","작업지시서"],["work","작업일지"],["prod","생산일지"],["count","수량 확인표"],["ledger","원료 수불 대장"]].map(([k,t])=>`<button data-act="docType" data-v="${k}" aria-pressed="${UI.docType===k}">${t}</button>`).join("")}</div>
+   <label class="row" style="gap:6px;font-size:14px">기준일 <input type="date" id="docDate" value="${UI.docDate}" style="width:auto"></label><span id="docLotSel"></span>
+   <span style="margin-left:auto" class="row">${SERVER?`<button class="btn primary" data-act="printDoc">인쇄</button>`:""}<button class="btn" data-act="dlDoc" data-v="html">인쇄용 파일(.html)</button><button class="btn" data-act="dlDoc" data-v="xlsx">엑셀(.xlsx)</button></span></div>
+   <p class="formula" id="docHint" style="margin:0"></p><p class="formula" style="margin:0">태블릿·폰에서는 화면 폭에 맞춰 줄여 보여 줍니다. 인쇄는 저장한 파일을 PC나 프린터 연결 기기에서 여세요.</p></div>
+  <div class="paper-wrap" id="docOut"></div>`}
+rDocs.after=()=>{if(!UI.docTouched&&!docLots(UI.docDate).length){const ds=packsArr().map(p=>p.date).sort();if(ds.length){UI.docDate=ds[ds.length-1];$("#docDate").value=UI.docDate}}
+  $("#docDate").addEventListener("change",e=>{UI.docTouched=true;UI.docDate=e.target.value;UI.docUnit=null;refresh()})};
+function docLots(D){return lotsArr().filter(l=>l.releaseDate===D||l.soakDate===D||(l.wash&&l.wash.date===D)||(l.heat&&l.heat.date===D)||packsOf(l.id).some(p=>p.date===D))}
+function docOut(){
+  const D=UI.docDate,sel=$("#docLotSel"),hint=$("#docHint");if(sel)sel.innerHTML="";
+  if(UI.docType==="prod"){
+    const U=unitsOf(lotsArr().filter(l=>packsOf(l.id).length)),near=U.filter(u=>packsOfUnit(u.ids).some(p=>p.date===D)),opts=near.length?near:U;
+    if(!UI.docUnit||!opts.find(u=>u.key===UI.docUnit))UI.docUnit=opts[0]?.key||null;
+    if(sel)sel.innerHTML=opts.length?`<select data-act="docUnit" style="width:auto;max-width:100%">${opts.map(u=>`<option value="${esc(u.key)}" ${UI.docUnit===u.key?"selected":""}>${esc(unitTitle(u))} · ${esc(unitBL(u))}</option>`).join("")}</select>`:"";
+    if(hint)hint.textContent=near.length?`${D} 포장된 작업 ${near.length}건`:`${D}에 포장된 작업이 없어 전체 포장 기록을 보여 줍니다.`;
+    return UI.docUnit?`<div class="paper" id="paper">${prodLog(keyIds(UI.docUnit))}</div>`:`<div class="empty">포장까지 입력된 로트가 없습니다. ④ 포장 입력 후 생산일지가 만들어집니다.</div>`}
+  if(UI.docType==="order"){const L=lotsArr().filter(l=>(l.wash&&l.wash.date===D)||(!(l.wash&&l.wash.kg!=null)&&l.planWashDate===D));
+    if(hint)hint.textContent=`세척일(또는 세척 예정일)이 ${D}인 로트 ${L.length}건`;return `<div class="paper" id="paper" style="min-height:0">${orderSheet(D,L)}</div>`}
+  if(UI.docType==="ledger"){if(hint)hint.textContent=`${D.slice(0,7)} 한 달 입고·출고 (기준일이 속한 달)`;return `<div class="paper" id="paper">${ledgerSheet(D)}</div>`}
+  if(UI.docType==="count"){if(hint)hint.textContent=`${addDays(D,-6)} ~ ${D} 포장·수량 기록 (로트 없는 기록 포함)`;return `<div class="paper" id="paper">${countSheet(D)}</div>`}
+  const L=docLots(D);if(hint)hint.textContent=`${D}에 출고·침수·세척·가열·포장 중 하나라도 있었던 로트 ${L.length}건`;
+  return `<div class="paper" id="paper">${workLog(D,L)}</div>`}
+const H=v=>v==null||v===""?"":`<span class="hand">${esc(v)}</span>`;
+const blank=(n,c)=>Array.from({length:Math.max(0,n)},()=>`<tr>${"<td></td>".repeat(c)}</tr>`).join("");
+const apprBox=()=>`<table class="appr" style="width:auto;margin:0 0 0 auto"><tr><th>담당</th><th>검토</th><th>승인</th></tr><tr><td>${H(S.cfg.manager)}</td><td></td><td></td></tr></table>`;
+function orderSheet(D,L){
+  const dt=new Date(D+"T00:00:00"),groups={};L.forEach(l=>{(groups[l.raw]=groups[l.raw]||[]).push(l)});let no=0,rows="";
+  Object.entries(groups).forEach(([raw,ls2])=>{no++;ls2.forEach((l,i)=>{const p=prod(l.productId)||{},c=calc(l),w=l.wash||{};
+    const ew=num(l.releaseKg)*(num(p.stdWash)||0)/100,cnt=Math.floor(ew*(num(p.stdPack)||0)/100/(num(p.sizeKg)||1)),wst=c.wasteKg+(num(w.wasteKg)||0);
+    rows+=`<tr>${i===0?`<td rowspan="${ls2.length}">${no}</td><td rowspan="${ls2.length}">${esc(raw.replace(/^\(.*?\)/,""))}</td>`:""}
+    <td>${esc(p.workName||"")}</td><td>${esc(p.name||"")}</td><td>${fmtKg(num(l.releaseKg))}kg</td><td>${p.stdWash??""}%</td><td>${fmt(ew,0)}kg</td>
+    <td>${c.wash!=null?H(fmtKg(c.wash))+" kg":"kg"}</td><td>${w.aKg!=null?H(fmtKg(num(w.aKg)))+" ":""}kg</td><td>${w.fatKg!=null?H(fmtKg(num(w.fatKg)))+" ":""}kg</td>
+    <td>${c.remainKg?H(fmt(c.remainKg,2))+" ":""}kg</td><td>${wst?H(fmt(wst,2))+" ":""}kg</td><td>${cnt}개${c.qty?`<br>${H(Math.round(c.qty)+"개")}`:""}</td><td>${esc(l.origin||"")}${c.group?"<br>(묶음)":""}</td></tr>`})});
+  return `<div style="text-align:right;font-size:12px">${H(S.cfg.manager)}</div><div class="ttl" style="letter-spacing:.05em;margin:6px 0 16px">${dt.getFullYear()}년 ${dt.getMonth()+1}월 ${dt.getDate()}일 ${DOW[dt.getDay()]}요일</div>
+  <table><thead><tr><th>No</th><th>원료육</th><th>작업명</th><th>제품명</th><th>투입중량</th><th>수율</th><th>예상<br>세척 중량</th><th>실제<br>세척 중량</th><th>A막창</th><th>지방</th><th>잔량</th><th>폐기</th><th>예상<br>생산 수량</th><th>비고</th></tr></thead>
+  <tbody>${rows}${blank(4-L.length,14)}</tbody></table><p style="font-size:10.5px;color:#555">수율·예상 세척 중량은 제품 기준값으로 계산합니다. 예상 생산 수량 = 예상 세척 중량 × 포장 기준 수율 ÷ 규격. 묶음 세척 로트는 출고 중량 비율로 나눈 값입니다.</p>`}
+function secTable(label,L,dateKey,rowFn,heads,cols,minRows){
+  const by={};L.forEach(x=>{const d=dateKey(x);if(d)(by[d]=by[d]||[]).push(x)});const ds=Object.keys(by).sort();if(!ds.length)ds.push("");
+  return ds.map(d=>{const rs=d?rowFn(by[d],d):[],total=Math.max(minRows||4,rs.length);
+    return `<table><thead><tr><th style="width:84px">${d?shortD(d):""}</th>${heads}</tr></thead><tbody>${Array.from({length:total},(_,i)=>`<tr>${i===0?`<td rowspan="${total}" style="font-weight:600">${label}</td>`:""}${rs[i]||"<td></td>".repeat(cols)}</tr>`).join("")}</tbody></table>`}).join("")}
+function workLog(D,L){
+  const dt=new Date(D+"T00:00:00");
+  const rawRow=l=>`<td class="l">${esc(l.raw)}</td><td>${esc(l.bl)}</td><td>${esc(l.rawExpiry||"")}</td><td>${esc(l.origin||"")}</td><td>${fmtKg(num(l.releaseKg))} kg</td><td class="l">${esc(l.note&&!/^예시/.test(l.note)?l.note:"")}</td>`;
+  const rawHead=`<th>품명</th><th>이력번호 · B/L번호</th><th>소비기한</th><th>원산지</th><th>출고중량</th><th>비고</th>`;
+  const washRows=ls2=>{const byP={};ls2.forEach(l=>{const c=calc(l);byP[l.productId]=byP[l.productId]||{w:0,t:0};if(c.wash&&c.thaw){byP[l.productId].w+=c.wash;byP[l.productId].t+=c.thaw}});
+    return ls2.map(l=>{const c=calc(l),w=l.wash||{},p=prod(l.productId)||{},g=byP[l.productId];
+      return `<td class="l">${esc(l.raw)}${c.group?"*":""}</td><td>${c.washYield!=null?H(fmt(c.rel*c.washYield,0)+" kg"):""}</td><td>${H(fmtKg(c.wash)+" kg")}</td><td>${H(c.washYield!=null?(c.washYield*100).toFixed(2)+"%":"")}</td><td>${fmtKg(c.rel)} kg</td><td>${w.aKg!=null?H(fmtKg(num(w.aKg))+" kg"):""}</td><td>${w.wasteKg!=null?H(fmtKg(num(w.wasteKg))+" kg"):""}</td><td>${esc((p.name||"").split(" ")[0])}</td><td>${g&&g.t?H((g.w/g.t*100).toFixed(2)+"%"):""}</td><td>${esc((p.sauce||"").replace(/\s*양념소스$/,""))}</td><td></td>`})};
+  const heatRows=ls2=>ls2.map(l=>{const c=calc(l),h=l.heat||{};return `<td class="l">${esc(l.raw)}${c.group?"*":""}</td><td>${esc(l.bl)}</td><td class="l">${esc(lotTitle(l))}</td><td>${H(fmtKg(c.heatIn)+" kg")}</td><td>${H(fmtKg(c.heatOut)+" kg")}</td><td>${H(pct(c.heatYield))}</td><td>${esc((h.start||"")+(h.end?"~"+h.end:""))}</td>`});
+  const ids=new Set(L.map(l=>l.id)),P=packsArr().filter(p=>p.date===D&&(!packIds(p).length||packIds(p).some(i=>ids.has(i)))).sort((a,b)=>(a.start||"").localeCompare(b.start||""));
+  const packRows=P.map(pk=>{const u=packIds(pk),c=u.length?calcUnit(u):null;return `<td class="l">${esc(pk.productName)}</td><td>${esc(pk.expiry||"")}</td><td>${H(pk.qty+"ea")}</td><td>${H(fmt(pk.qty*pk.sizeKg,0)+" kg")}</td><td>${esc(pk.origin||"")}</td><td>${H(c&&c.packYield!=null?(c.packYield*100).toFixed(1)+"%":"")}</td><td class="l">${H(`잔량 : ${fmt(num(pk.remainG)||0,0)}g / 폐기 : ${fmt(num(pk.wasteG)||0,0)}g`)}${u.length>1?" (묶음)":""}</td>`});
+  const hasHeat=L.some(l=>l.heat&&l.heat.date&&l.heat.outKg!=null);
+  const grp=unitsOf(L).filter(u=>u.ids.length>1);
+  return `<table style="margin-bottom:18px"><tr><td style="width:150px;font-weight:600;height:56px">${String(dt.getFullYear()).slice(2)}년 ${dt.getMonth()+1}월 ${dt.getDate()}일 (${DOW[dt.getDay()]})</td><td class="ttl" style="border-right:0">작업일지</td><td style="width:180px;padding:0;border-left:0">${apprBox()}</td></tr></table>
+  ${secTable("해동",L,l=>l.releaseDate,ls2=>ls2.map(rawRow),rawHead,6)}
+  ${secTable("침수",L,l=>l.soakDate,ls2=>ls2.map(rawRow),rawHead,6)}
+  ${secTable("세척",L,l=>l.wash&&l.wash.kg!=null?l.wash.date:"",washRows,`<th>품명</th><th>세척중량</th><th>실 사용중량</th><th>수율</th><th>원육</th><th>A막창</th><th>폐기막창</th><th>제품명</th><th>통합수율</th><th>소스</th><th>비고</th>`,11)}
+  ${hasHeat?secTable("가열",L,l=>l.heat&&l.heat.outKg!=null?l.heat.date:"",heatRows,`<th>품명</th><th>B/L번호</th><th>제품명</th><th>가열 전</th><th>가열 후</th><th>가열 수율</th><th>시간</th>`,7,2):""}
+  <table><thead><tr><th style="width:84px">${shortD(D)}</th><th>제품명</th><th>소비기한</th><th>수량</th><th>중량</th><th>원산지</th><th>수율</th><th>비고</th></tr></thead><tbody>
+  ${Array.from({length:Math.max(5,packRows.length)},(_,i)=>`<tr>${i===0?`<td rowspan="${Math.max(5,packRows.length)}" style="font-weight:600">포장</td>`:""}${packRows[i]||"<td></td>".repeat(7)}</tr>`).join("")}</tbody></table>
+  <p style="font-size:10.5px;color:#555">세척 수율 = 세척 후 ÷ 해동 후 중량 · 세척중량 = 원육 × 세척 수율 · 포장 수율 = (포장 + 잔량 + 폐기) ÷ 세척 중량${grp.length?`<br>* 함께 세척한 로트(${grp.map(u=>unitBL(u)).join(" / ")})는 합계 중량을 출고 중량 비율로 나눈 값입니다.`:""}</p>`}
+function prodLog(ids){
+  const L=ids.map(id=>S.lots[id]).filter(Boolean),l=L[0],p=prod(l.productId)||{},c=calcUnit(ids),packs=packsOfUnit(ids).slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  const sauces={};packs.forEach(pk=>{if(pk.sauceKg){const k=pk.sauceName||"양념소스";sauces[k]=sauces[k]||{kg:0,exp:pk.sauceExpiry};sauces[k].kg+=num(pk.sauceKg)}});
+  const sRows=Object.entries(sauces).map(([n,s])=>`<tr><td class="l">${esc(n)}</td><td class="r">${H(fmt(s.kg,2))}</td><td>${s.exp?"~"+yymmdd(s.exp):""}</td></tr>`).join("");
+  const raw=x=>`<td class="l">${esc(x.raw)}</td><td>${esc(x.bl)}</td><td>${esc(x.rawExpiry||"")}</td><td>${esc(x.origin||"")}</td>`;
+  const dates=k=>[...new Set(L.map(k).filter(Boolean))].join(", ");
+  return `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="rev">원본 수정일 ${esc(S.cfg.formRev||"")}</div>
+   <div class="ttl" style="text-align:left;letter-spacing:.1em;margin-top:22px">${esc(p.logTitle||"생산일지")}</div><div style="margin-left:4px">${esc(p.logSub||"")}</div></div>
+   <table class="appr" style="width:auto;margin:0"><tr><th rowspan="2" style="width:22px;padding:2px">결<br>재</th><th>담당</th><th>검토</th><th>승인</th></tr><tr><td>${H(S.cfg.manager)}</td><td></td><td></td></tr></table></div>
+  <div class="dline" style="margin-top:14px">일자 : &nbsp; ${esc(dates(x=>x.soakDate||x.releaseDate))}</div>
+  <table><tr><th>투입 품명(원료육)</th><th>BL NO./이력번호</th><th>유통기한(~까지)</th><th>원산지</th><th>중량(kg)</th><th>비고</th></tr>
+   ${L.map(x=>{const cc=calc(x);return `<tr>${raw(x)}<td class="r">${H(cc.thaw!=null?fmt(cc.thaw,2):"")}</td><td>${cc.group?"묶음":""}</td></tr>`}).join("")}${blank(2-L.length,6)}
+   <tr><td colspan="4">총 해동 중량(kg)</td><td colspan="2" class="r">${H(c.thaw!=null?fmt(c.thaw,2):"")}</td></tr></table>
+  <div class="dline">일자 : &nbsp; ${esc(dates(x=>x.wash&&x.wash.date))}</div>
+  <table><tr><th>품명(원료육)</th><th>BL NO./이력번호</th><th>유통기한(~까지)</th><th>원산지</th><th>중량(kg)</th></tr>
+   ${L.map(x=>{const cc=calc(x);return `<tr>${raw(x)}<td class="r">${H(cc.wash!=null?fmt(cc.wash,2):"")}</td></tr>`}).join("")}${blank(2-L.length,5)}
+   <tr><td colspan="4">총 세척 중량(kg)</td><td class="r">${H(c.wash!=null?fmt(c.wash,2):"")}</td></tr></table>
+  <table><tr><th style="width:40%">투입품명(원료)</th><th>투입중량(kg)</th><th>비고</th></tr>
+   <tr><td class="l">돼지막창</td><td class="r">${H(c.wash!=null?fmt(c.wash,2):"")}</td><td></td></tr>${sRows}
+   <tr><td>총 투입 원료(kg)</td><td class="r">${H(c.inputTotal!=null?fmt(c.inputTotal,2):"")}</td><td></td></tr>
+   ${c.heatOut!=null?`<tr><td>가열 전 중량(kg)</td><td class="r">${H(fmt(c.heatIn,2))}</td><td>${esc(dates(x=>x.heat&&x.heat.date))}</td></tr><tr><td>가열 후 중량(kg)</td><td class="r">${H(fmt(c.heatOut,2))}</td><td>가열 수율 ${H(pct(c.heatYield))}</td></tr>`:""}
+   <tr><td>생산 중량(kg)</td><td class="r">${H(packs.length?fmt(c.packKg,2):"")}</td><td></td></tr></table>
+  <div class="dline">일자 : &nbsp; ${esc([...new Set(packs.map(x=>x.date))].join(", "))}</div>
+  <table><tr><th>생산품명</th><th>소비기한(~까지)</th><th>생산수량(ea)</th><th>중량(kg)</th><th>원산지</th><th>잔량(kg)</th></tr>
+   ${packs.map(pk=>`<tr><td class="l">${esc(pk.productName)}</td><td>${esc(pk.expiry||"")}</td><td class="r">${H(fmt(pk.qty,2))}</td><td class="r">${H(fmt(pk.qty*pk.sizeKg,2))}</td><td>${esc(pk.origin||"")}</td><td class="r">${pk.remainG?H(fmt(pk.remainG/1000,2)):""}</td></tr>`).join("")}
+   <tr><td colspan="3">합계(kg)</td><td colspan="3" class="r">${H(fmt(c.packKg,2))}</td></tr></table>
+  <p style="font-size:10.5px;color:#555">세척 수율 ${pct(c.washYield)}${c.heatYield!=null?` · 가열 수율 ${pct(c.heatYield)}`:""} · 포장 수율 ${pct(c.packYield)} · 폐기 ${fmt(c.wasteKg,2)}kg</p>`}
+function countSheet(D){
+  const from=addDays(D,-6),P=packsArr().filter(p=>p.date>=from&&p.date<=D).sort((a,b)=>(a.date+(a.start||"")).localeCompare(b.date+(b.start||"")));let prev="";
+  const rows=P.map(pk=>{const same=pk.date===prev;prev=pk.date;return `<tr><td>${same?"〃":esc(yymmdd(pk.date))}</td><td class="l">${esc(pk.productName)}</td><td>${esc(yymmdd(pk.expiry||""))}</td><td>${esc((pk.start||"")+(pk.end?"~"+pk.end:""))}</td><td class="r">${H(pk.qty)}</td><td class="r">${pk.remainG?H(fmt(pk.remainG,0)+"g"):""}</td><td class="r">${pk.wasteG?H(fmt(pk.wasteG,0)+"g"):""}</td></tr>`}).join("");
+  return `<div class="ttl" style="font-size:18px;letter-spacing:.05em;margin-bottom:14px">★ 제품 1차 수량 확인용 ★</div>
+  <table><thead><tr><th style="width:70px">날짜</th><th>제품명</th><th style="width:76px">소비기한</th><th style="width:96px">(중포)시간</th><th style="width:70px">수량</th><th style="width:76px">잔량</th><th style="width:76px">폐기</th></tr></thead><tbody>${rows}${blank(22-P.length,7)}</tbody></table>`}
+async function dlDoc(kind){
+  const paper=$("#paper");if(!paper){toast("저장할 일지가 없습니다");return}
+  const name={order:"작업지시서",work:"작업일지",prod:"생산일지",count:"수량확인표",ledger:"원료수불대장"}[UI.docType]+"_"+UI.docDate;let data,filename;
+  if(kind==="xlsx"){if(!window.XLSX){toast("엑셀 변환 도구를 불러오지 못했습니다. 인쇄용 파일로 저장하세요");return}
+    const ws=XLSX.utils.aoa_to_sheet([[name]]);$$("table",paper).forEach(t=>{XLSX.utils.sheet_add_dom(ws,t,{origin:-1});XLSX.utils.sheet_add_aoa(ws,[[""]],{origin:-1})});
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"일지");data=new Uint8Array(XLSX.write(wb,{type:"array",bookType:"xlsx"}));filename=name+".xlsx"}
+  else{const css=[...document.styleSheets].flatMap(s=>{try{return [...s.cssRules].map(r=>r.cssText)}catch{return[]}}).filter(t=>/\.paper|:root/.test(t)).join("\n");
+    const clone_=paper.cloneNode(true);clone_.style.transform="";clone_.style.marginLeft="";
+    data=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${name}</title><style>${css}
+body{margin:0;background:#fff}.paper{box-shadow:none;margin:0 auto}@page{size:A4;margin:8mm}@media print{.paper{width:auto;padding:0}}</style></head><body>${clone_.outerHTML}</body></html>`;filename=name+".html"}
+  await save(filename,data)}
+async function save(filename,data){let d=null;try{d=await window.claude?.use?.("downloads")}catch{}
+  if(!d){toast("이 화면에서는 파일 저장을 쓸 수 없습니다");return}
+  try{await d.save({filename,data});toast(filename+" 저장");return true}catch(e){if(e&&e.code!=="declined")toast("저장하지 못했습니다 ("+(e.code||"오류")+")");return false}}
+
+/* ───────── 기준·백업 (관리자) ───────── */
+const PF=[["name","제품명","t",190],["workName","작업명","t",100],["sizeKg","규격kg","n"],["stdWash","세척 기준%","n"],["needsHeat","가열","c"],["stdHeat","가열 기준%","n"],["stdPack","포장 기준%","n"],["expiryDays","소비기한(일)","n"],["origin","원산지 표기","t",90],["sauce","양념소스","t",120],["logTitle","생산일지 제목","t",120],["logSub","일지 부제","t",190]];
+function rSettings(){
+  if(!UI.isAdmin)return `<div class="card"><div class="empty" style="border:0">관리자만 볼 수 있는 화면입니다.</div></div>`;
+  slot("prodTbl",prodTbl);slot("workerBox",workerBox);slot("trash",trashBox);slot("siteBox",siteBox);slot("lastBk",()=>{const b=S.cfg.lastBackup;return b&&b.at?`마지막 백업: ${lt(b.at)} ${esc(b.by||"")}`:"아직 백업한 적이 없습니다."});
+  return `<div><h2>기준·백업 <span class="chip s2">관리자 전용</span></h2><p class="lead">제품별 기준 수율과 소비기한, 직원 명단, 일지에 들어갈 담당자 이름을 정합니다. 기준값은 회사 기준으로 바꿔 주세요.</p></div>
+  <div class="card"><h3>직원 · 로그인</h3><p class="formula" style="margin:-6px 0 10px">직원 계정(아이디·비밀번호)과 로그인을 관리합니다. 이름이 통일되어야 작업자별 비교가 정확합니다.</p><div id="workerBox"></div></div>
+  <div class="card"><h3>사업장</h3><p class="formula" style="margin:-6px 0 10px">코리아식품과 하비랑처럼 공정이 같은 공장을 나눠 기록합니다. 화면 위 ‘사업장’에서 고르면 그 공장 기록만 보입니다.</p><div id="siteBox"></div></div>
+  <div class="card"><h3>제품 기준</h3><div id="prodTbl"></div></div>
+  <div class="grid2"><form class="card" id="cfgForm"><h3>일지·경고 설정</h3><div class="fields">
+    <label class="f"><b>일지 담당자</b><input id="c_mgr" value="${esc(S.cfg.manager||"")}"></label>
+    <label class="f"><b>경고 기준 (±%p)</b><input id="c_tol" class="num" inputmode="decimal" value="${esc(S.cfg.tol)}"></label>
+    <label class="f"><b>생산일지 원본 수정일</b><input id="c_rev" value="${esc(S.cfg.formRev||"")}"></label>
+    <label class="f"><b>원료 재고 부족 기준</b><span class="unit"><input id="c_low" class="num" inputmode="decimal" value="${esc(S.cfg.lowStock??800)}"><span>kg</span></span></label></div>
+    <div class="row end" style="margin-top:12px"><button class="btn primary" type="submit">설정 저장</button></div></form>
+   <div class="card"><h3>백업</h3><p class="muted" style="margin:0 0 10px;font-size:14px">${mode==="shared"?"입력값은 이 페이지의 공유 저장소에 보관됩니다. 사내 PC나 NAS에 따로 보관하려면 주기적으로 내려받으세요.":"지금은 이 기기의 브라우저에만 저장됩니다. 브라우저 기록을 지우면 사라지니 백업 파일을 꼭 내려받으세요."}</p>
+    <p class="formula" id="lastBk" style="margin:0 0 10px"></p>
+    <div class="row"><button class="btn" data-act="exportXlsx">로트·포장 기록 엑셀(.xlsx)</button><button class="btn" data-act="exportJson">전체 백업(.json)</button>
+    <label class="btn" style="display:inline-block">백업 불러오기<input type="file" id="importJson" accept=".json,application/json" hidden></label></div></div></div>
+  <div class="card"><h3>삭제된 기록</h3><p class="formula" style="margin:-6px 0 10px">삭제는 관리자만 할 수 있고, 여기서 되살릴 수 있습니다.</p><div id="trash"></div></div>`}
+rSettings.after=()=>{if(!UI.isAdmin)return;
+  $("#cfgForm").addEventListener("submit",e=>{e.preventDefault();const c={...S.cfg,manager:$("#c_mgr").value.trim(),tol:num($("#c_tol").value)||10,formRev:$("#c_rev").value.trim(),lowStock:num($("#c_low").value)??800};delete c.id;put("config/main",c);logEvent("설정 변경",`담당자 ${c.manager||"-"} · 경고 ±${c.tol}%p`);toast("설정을 저장했습니다")});
+  $("#importJson").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{importData(JSON.parse(await f.text()))}catch{toast("백업 파일을 읽지 못했습니다. 이 화면에서 내려받은 .json 파일인지 확인하세요")}e.target.value=""})};
+function workerBox(){const L=staffList(),legacy=(S.cfg.workers||[]).filter(n=>!L.some(w=>normName(w.name)===normName(n))),on=!!S.cfg.loginRequired;
+  return `<div class="row" style="justify-content:space-between;margin-bottom:10px">${SERVER?`<b style="font-size:15px">사내 서버판은 항상 아이디·비밀번호로 로그인합니다</b>`:`<label class="row" style="gap:8px;font-size:15px"><input type="checkbox" data-act="loginToggle" ${on?"checked":""} style="width:auto"> <b>로그인 사용 (아이디·비밀번호)</b></label>`}
+   <span class="row" style="gap:6px;font-size:13px;color:var(--muted)">자동 로그아웃 <input id="autoLogout" class="num" inputmode="numeric" value="${esc(S.cfg.autoLogout??30)}" style="width:70px;padding:6px;font-size:14px"> 분 <button class="btn small" data-act="saveAutoLogout">저장</button></span></div>
+  <div class="tbl-wrap"><table class="t" style="min-width:760px"><thead><tr><th>이름</th><th>아이디</th><th>역할</th><th>비밀번호</th><th>비밀번호 새로 정하기</th><th></th></tr></thead><tbody>
+  ${L.map(w=>`<tr><td>${esc(w.name)}${w.addedBy==="self"?"<small>직접 가입</small>":w.addedBy&&w.addedBy!==w.name?`<small>${esc(w.addedBy)} 추가</small>`:""}</td>
+   <td>${w.loginId?`<span style="font-family:var(--f-num)">${esc(w.loginId)}</span>`:`<input id="lid_${w.id}" placeholder="아이디 정하기" autocapitalize="none" style="width:120px;padding:6px;font-size:14px;min-height:0">`}</td>
+   <td><select data-act="staffRole" data-id="${w.id}" style="width:auto;padding:6px;font-size:14px;min-height:0"><option value="worker" ${w.role!=="manager"?"selected":""}>현장</option><option value="manager" ${w.role==="manager"?"selected":""}>관리자</option></select></td>
+   <td>${w.pinHash||w.hasPin?`<span class="chip s3">설정됨</span>`:`<span class="chip s1">없음</span>`}</td>
+   <td><span class="row" style="gap:6px;flex-wrap:nowrap"><input type="password" id="pw_${w.id}" placeholder="4자 이상" autocomplete="new-password" style="width:120px;padding:6px;font-size:14px;min-height:0"><button class="btn small" data-act="setPw" data-id="${w.id}">저장</button></span></td>
+   <td>${UI.confirm===w.id?`<span class="confirm"><button class="btn small danger" data-act="rmStaff" data-id="${w.id}">빼기</button><button class="btn small" data-act="noConfirm">취소</button></span>`:`<button class="btn small" data-act="askDel" data-id="${w.id}">빼기</button>`}</td></tr>`).join("")}
+  ${legacy.map(n=>`<tr><td>${esc(n)}</td><td colspan="5" class="muted">이전 명단 · 계정을 만들려면 아래에서 같은 이름으로 추가하세요</td></tr>`).join("")}
+  ${!L.length&&!legacy.length?`<tr><td colspan="6" class="muted">아직 계정이 없습니다.</td></tr>`:""}</tbody></table></div>
+  <div class="row" style="margin-top:10px"><input id="newLid" placeholder="아이디 (영문·숫자)" autocapitalize="none" style="max-width:160px"><input id="newWorker" placeholder="이름" style="max-width:140px"><input id="newPw" type="password" placeholder="비밀번호 4자 이상" autocomplete="new-password" style="max-width:170px"><select id="newRole" style="width:auto"><option value="worker">현장</option><option value="manager">관리자</option></select><button class="btn" data-act="addWorker">계정 만들기</button></div>
+  <p class="formula" style="margin:8px 0 0">로그인을 쓰면 사이트에 들어올 때 아이디·비밀번호를 묻고, 작업 기록에 로그인한 사람의 이름이 자동으로 남습니다. 관리자 화면은 ‘관리자’ 역할로 로그인해야 열립니다. 직원은 로그인 화면의 ‘회원가입’으로 직접 계정을 만들 수도 있고, 비밀번호를 잊으면 여기서 새로 정해 줍니다.</p>`}
+function prodTbl(){
+  const inp=(k,t,w,v)=>t==="c"?`<input type="checkbox" data-k="${k}" ${v?"checked":""} style="width:22px;height:22px">`:`<input data-k="${k}" ${t==="n"?'class="num" inputmode="decimal" style="width:78px;font-size:14px;padding:6px"':`style="padding:6px;font-size:13px;min-width:${w||100}px"`} value="${esc(v??"")}">`;
+  return `<div class="tbl-wrap"><table class="t" style="min-width:1250px"><thead><tr>${PF.map(f=>`<th>${f[1]}</th>`).join("")}<th></th></tr></thead><tbody>
+  ${prodArr().map(p=>`<tr data-pid="${p.id}">${PF.map(([k,,t,w])=>`<td style="padding:4px">${inp(k,t,w,p[k])}</td>`).join("")}<td style="padding:4px"><button class="btn small" data-act="saveProd" data-id="${p.id}">저장</button></td></tr>`).join("")}
+  <tr data-pid="new">${PF.map(([k,,t,w])=>`<td style="padding:4px">${inp(k,t,w,"")}</td>`).join("")}<td style="padding:4px"><button class="btn small primary" data-act="saveProd" data-id="new">추가</button></td></tr></tbody></table></div>
+  <p class="formula" style="margin:8px 0 0">세척 기준 = 세척 후 ÷ 해동 후 · 가열 기준 = 가열 후 ÷ 가열 전 (‘가열’ 표시 제품만) · 포장 기준 = (포장+잔량+폐기) ÷ 세척 · 소비기한(일) = 포장일부터 더할 날수. 로트 없이 수량만 기록하는 제품(참숯골 등)도 여기 추가하면 됩니다.</p>`}
+function trashBox(){const L=Object.values(S.lots).filter(l=>l.deleted),P=Object.values(S.packs).filter(p=>p.deleted&&!p.deletedWith),RW=Object.values(S.raws).filter(r=>r.deleted);
+  if(!L.length&&!P.length&&!RW.length)return `<div class="empty">삭제된 기록이 없습니다.</div>`;
+  return `<div style="display:grid;gap:8px">${L.map(l=>`<div class="packrow"><div><b>로트 B/L ${esc(l.bl)}</b> · ${esc(lotTitle(l))}</div><button class="btn small" data-act="restore" data-k="lot" data-id="${l.id}">되살리기</button><div class="m" style="grid-column:1/-1">출고 ${esc(l.releaseDate)} · 삭제 ${esc(lt(l.deletedAt))} ${esc(l.deletedBy||"")}</div></div>`).join("")}
+  ${RW.map(r=>`<div class="packrow"><div><b>원료 입고 B/L ${esc(r.bl)}</b> · ${esc(r.raw)} ${fmtKg(num(r.inKg))}kg</div><button class="btn small" data-act="restore" data-k="raw" data-id="${r.id}">되살리기</button><div class="m" style="grid-column:1/-1">입고 ${esc(r.inDate)} · 삭제 ${esc(lt(r.deletedAt))} ${esc(r.deletedBy||"")}</div></div>`).join("")}
+  ${P.map(p=>`<div class="packrow"><div><b>포장</b> ${esc(p.productName)} ${p.qty}ea</div><button class="btn small" data-act="restore" data-k="pack" data-id="${p.id}">되살리기</button><div class="m" style="grid-column:1/-1">${esc(p.date)} · 삭제 ${esc(lt(p.deletedAt))} ${esc(p.deletedBy||"")}</div></div>`).join("")}</div>`}
+function softDelete(kind,id){const now=new Date().toISOString();
+  if(kind==="lot"){const l=clone(S.lots[id]);l.deleted=true;l.deletedAt=now;l.deletedBy=who();put("lots/"+id,l,true);
+    packsOf(id).filter(p=>packIds(p).length===1).forEach(p0=>{const p=clone(p0);p.deleted=true;p.deletedAt=now;p.deletedWith=id;put("packs/"+p.id,p,true)});
+    logEvent("로트 삭제",`B/L ${l.bl} ${lotTitle(l)}`,id)}
+  else if(kind==="raw"){const r=clone(S.raws[id]);r.deleted=true;r.deletedAt=now;r.deletedBy=who();put("raws/"+id,r,true);logEvent("입고 삭제",`B/L ${r.bl} ${fmtKg(num(r.inKg))}kg`,id)}
+  else{const p=clone(S.packs[id]);p.deleted=true;p.deletedAt=now;p.deletedBy=who();put("packs/"+id,p,true);logEvent("포장 삭제",`${p.productName} ${p.qty}ea (${p.date})`,id)}
+  refresh();toast("삭제했습니다. ‘기준·백업’에서 되살릴 수 있습니다")}
+function restore(kind,id){
+  if(kind==="lot"){const l=clone(S.lots[id]);delete l.deleted;delete l.deletedAt;delete l.deletedBy;put("lots/"+id,l,true);
+    Object.values(S.packs).filter(p=>p.deletedWith===id).forEach(p0=>{const p=clone(p0);delete p.deleted;delete p.deletedAt;delete p.deletedWith;put("packs/"+p.id,p,true)});logEvent("로트 복구",`B/L ${l.bl}`,id)}
+  else if(kind==="raw"){const r=clone(S.raws[id]);delete r.deleted;delete r.deletedAt;delete r.deletedBy;put("raws/"+id,r,true);logEvent("입고 복구",`B/L ${r.bl}`,id)}
+  else{const p=clone(S.packs[id]);delete p.deleted;delete p.deletedAt;delete p.deletedBy;put("packs/"+id,p,true);logEvent("포장 복구",`${p.productName} ${p.qty}ea`,id)}
+  refresh();toast("되살렸습니다")}
+function importData(j){let n=0,m=0;
+  Object.entries(j.products||{}).forEach(([id,p])=>put("products/"+id,p,true));
+  Object.entries(j.lots||{}).forEach(([id,l0])=>{const l=clone(l0);if(Array.isArray(l.packs)){l.packs.forEach(pk=>{const pid=pk.id||uid("pk");const r={...pk,lotIds:[id],lotId:id};delete r.id;put("packs/"+pid,r,true);m++});delete l.packs}put("lots/"+id,l,true);n++});
+  Object.entries(j.packs||{}).forEach(([id,p])=>{put("packs/"+id,p,true);m++});
+  Object.entries(j.raws||{}).forEach(([id,r])=>put("raws/"+id,r,true));
+  Object.entries(j.staff||{}).forEach(([id,w])=>put("staff/"+id,w,true));
+  if(j.cfg){const c={...j.cfg};delete c.id;put("config/main",c,true)}
+  logEvent("백업 불러오기",`로트 ${n}건 · 포장 ${m}건`);refresh();toast(`로트 ${n}건, 포장 ${m}건을 불러왔습니다`)}
+function exportXlsx(){
+  if(!window.XLSX){toast("엑셀 변환 도구를 불러오지 못했습니다. 전체 백업(.json)을 쓰세요");return}
+  const r1=[["출고일","원료육","이력·B/L","원료 소비기한","원산지","출고kg","제품","침수일","세척일","해동kg","세척kg","A막창kg","지방kg","폐기막창kg","세척수율%","가열일","가열전kg","가열후kg","가열수율%","포장수량ea","포장kg","잔량kg","폐기kg","소스kg","포장수율%","종합수율%","묶음","상태","확인필요"]];
+  lotsArr().forEach(l=>{const c=calc(l),w=l.wash||{},h=l.heat||{};const r=v=>v==null?null:+(+v).toFixed(2);
+    r1.push([l.releaseDate,l.raw,l.bl,l.rawExpiry,l.origin,c.rel,lotTitle(l),l.soakDate,w.date||"",r(c.thaw),r(c.wash),r(w.aKg),r(w.fatKg),r(w.wasteKg),c.washYield!=null?r(c.washYield*100):null,h.date||"",r(c.heatIn),r(c.heatOut),c.heatYield!=null?r(c.heatYield*100):null,c.qty?r(c.qty):null,c.nPacks?r(c.packKg):null,c.nPacks?r(c.remainKg):null,c.nPacks?r(c.wasteKg):null,r(c.sauceKg)||null,c.packYield!=null?r(c.packYield*100):null,c.totalYield!=null?r(c.totalYield*100):null,c.group?"묶음":"",c.stageLabel,c.warns.map(x=>x.t).join(" / ")])});
+  const r2=[["포장일","제품","수량ea","중량kg","잔량g","폐기g","소비기한","시작","종료","소스","소스kg","입력자","연결 B/L"]];
+  packsArr().forEach(p=>r2.push([p.date,p.productName,p.qty,+(p.qty*p.sizeKg).toFixed(2),p.remainG,p.wasteG,p.expiry,p.start,p.end,p.sauceName,p.sauceKg,p.by,packIds(p).map(i=>S.lots[i]?.bl||"").join("+")||"(로트 없음)"]));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r1),"로트기록");XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r2),"포장기록");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["입고일","사업장","품명","이력·B/L","원산지","소비기한","입고kg","출고kg","남은kg","거래처"],...rawsArr().map(r=>[r.inDate,siteOf(r),r.raw,r.bl,r.origin,r.rawExpiry,num(r.inKg),rawUsed(r.id),rawRemain(r),r.supplier])]),"원료재고");
+  save(`수율_기록_${todayStr()}.xlsx`,new Uint8Array(XLSX.write(wb,{type:"array",bookType:"xlsx"})))}
+
+/* ───────── 관리자 ───────── */
+const AST={good:"정상",warn:"주의",crit:"경고",run:"진행 중"};
+const aStatus=d=>d==null?"run":d>=-1?"good":d>=-3?"warn":"crit";
+const aPill=s=>`<span class="apill ${s}">${AST[s]}</span>`;
+const lastPackDate=l=>{const d=packsOf(l.id).map(p=>p.date).sort();return d[d.length-1]||""};
+function am(l){const c=calc(l),p=prod(l.productId)||{},sw=(num(p.stdWash)||0)/100,sp=(num(p.stdPack)||0)/100,stdTot=sw*sp,done=c.nPacks>0&&!!c.thaw;
+  const tot=done?c.acc/c.thaw:null,dev=done&&stdTot?(tot-stdTot)*100:null,price=num(S.prices[l.productId]),lossKg=done&&stdTot?c.thaw-c.acc/stdTot:null;
+  return {...c,l,p,stdTot,done,tot,dev,price,lossKg,won:lossKg!=null&&price?lossKg*price:null,
+    washDev:c.washYield!=null&&sw?(c.washYield-sw)*100:null,heatDev:c.heatYield!=null&&num(p.stdHeat)?(c.heatYield*100-p.stdHeat):null,packDev:c.packYield!=null&&sp?(c.packYield-sp)*100:null,
+    date:lastPackDate(l)||(l.wash&&l.wash.date)||l.releaseDate||""}}
+function aAgg(ms){const d=ms.filter(m=>m.done&&m.stdTot),thaw=sum(d,m=>m.thaw),acc=sum(d,m=>m.acc),std=sum(d,m=>m.thaw*m.stdTot),pr=d.filter(m=>m.won!=null);
+  const H=ms.filter(m=>m.heatYield!=null),W=ms.filter(m=>m.washYield!=null),P=ms.filter(m=>m.packYield!=null);
+  const rel=sum(d,m=>m.rel);
+  return {rel,s1:W.length?sum(W,m=>m.wash)/sum(W,m=>m.rel):null,s2:H.length?sum(H,m=>m.heatOut)/sum(H,m=>m.rel):null,s3:rel?sum(d,m=>m.packKg)/rel:null,n:d.length,thaw,acc,std,pack:sum(d,m=>m.packKg),qty:sum(d,m=>m.qty),waste:sum(d,m=>m.wasteKg),wash:sum(d,m=>m.wash),
+    washY:W.length?sum(W,m=>m.wash)/sum(W,m=>m.thaw):null,heatY:H.length?sum(H,m=>m.heatOut)/sum(H,m=>m.heatIn):null,packY:P.length?sum(P,m=>m.acc)/sum(P,m=>m.wash):null,
+    tot:thaw?acc/thaw:null,stdTot:thaw?std/thaw:null,dev:thaw?(acc-std)/thaw*100:null,won:pr.length?sum(pr,m=>m.won):null,unpriced:d.length-pr.length,lossKg:sum(d,m=>m.lossKg)}}
+function aLots(){const cut=UI.aPeriod==="all"?"":addDays(todayStr(),-Number(UI.aPeriod));return lotsArr().map(am).filter(m=>!cut||m.date>=cut||!m.done)}
+function stalledU(o){const t=todayStr(),l=o.lots[0],w=l.wash||{},days=w.date?Math.round((new Date(t)-new Date(w.date))/864e5):0;
+  if(o.stage==="wash"&&l.planWashDate&&l.planWashDate<t)return `세척 예정일(${l.planWashDate}) 지남`;
+  if(o.stage==="heat"&&days>=1)return `세척 후 ${days}일째 가열 미입력`;
+  if((o.stage==="pack"||o.stage==="packing")&&days>=2)return `세척 후 ${days}일째 포장 ${o.stage==="pack"?"미입력":"미완료"}`;return ""}
+function rank(items,head){
+  if(!items.length)return `<div class="empty">포장까지 끝난 로트가 아직 없습니다.</div>`;
+  const max=Math.max(3,Math.ceil(Math.max(...items.map(i=>Math.abs(i.dev||0))))),P=v=>50+v/max*50;
+  return `<div class="rk-axis"><span></span><span class="ax"><span>−${max}</span><span>0</span><span>+${max}</span></span><span>기준 대비</span><span>${head||""}</span></div>`+
+  items.map(i=>{const s=i.st||aStatus(i.dev),a=P(Math.min(0,i.dev||0)),b=P(Math.max(0,i.dev||0)),tag=i.act?"button":"div";
+    return `<${tag} class="rk"${i.act?` data-act="${i.act}" data-v="${esc(i.v)}"`:""}><span class="rk-n">${esc(i.name)}<small>${i.sub||""}</small></span>
+    <span class="rk-t" aria-hidden="true"><span class="z"></span><span class="b ${s}" style="left:${a}%;width:${Math.max(.8,b-a)}%"></span></span>
+    <span class="rk-v ${s}">${i.dev==null?"–":sgn(i.dev)+"%p"}</span><span class="rk-m">${i.meta||""}</span></${tag}>`}).join("")}
+function groupBy(ms,key){const g={};ms.forEach(m=>{const k=key(m);if(k==null||k==="")return;(g[k]=g[k]||[]).push(m)});return g}
+const AVIEWS=[["overview","한눈에 보기"],["flow","공정·로트"],["compare","원료·작업자 비교"],["board","진행 현황"],["report","주간·월간 보고서"],["check","수기 대조"],["log","변경 기록"]];
+function rAdmin(){
+  if(!UI.isAdmin)return `<div class="card"><div class="empty" style="border:0">관리자만 볼 수 있는 화면입니다.</div></div>`;
+  slot("adminBody",adminBody);
+  return `<div class="row" style="justify-content:space-between;align-items:flex-end"><div><h2>관리자 현황 <span class="chip s2">관리자 전용</span></h2><p class="lead">편집자·소유자 권한이 있는 사람에게만 보입니다. 현장 입력값이 들어오는 대로 갱신됩니다.</p></div>
+   <div class="row" id="aPeriodBox"><div class="seg" role="group" aria-label="기간">${[["7","7일"],["30","30일"],["90","90일"],["all","전체"]].map(([k,t])=>`<button data-act="aPeriod" data-v="${k}" aria-pressed="${UI.aPeriod===k}">${t}</button>`).join("")}</div></div></div>
+  <div class="seg" role="tablist" aria-label="관리자 화면">${AVIEWS.map(([k,t])=>`<button data-act="aView" data-v="${k}" aria-pressed="${UI.aView===k}">${t}</button>`).join("")}</div>
+  <div id="adminBody" style="display:grid;gap:18px"></div>`}
+function adminBody(){
+  $$('[data-act="aView"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===UI.aView));$$('[data-act="aPeriod"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===UI.aPeriod));
+  const pb=$("#aPeriodBox");if(pb)pb.hidden=["report","log","board","check"].includes(UI.aView);
+  if(UI.aView==="log")return aLog();if(UI.aView==="check")return aCheck();
+  if(!lotsArr().length&&!packsArr().length)return `<div class="card"><div class="empty" style="border:0">아직 입력된 로트가 없습니다. 현장에서 ① 출고부터 입력하면 여기에 모입니다.</div></div>`;
+  return {overview:aOverview,flow:aFlow,compare:aCompare,board:aBoard,report:aReport}[UI.aView]()}
+
+function aOverview(){
+  const ms=aLots(),a=aAgg(ms),s=aStatus(a.dev),done=ms.filter(m=>m.done),U=unitsOf(lotsArr()).map(u=>calcUnit(u.ids)),st=U.filter(o=>stalledU(o));
+  const nw=done.filter(m=>aStatus(m.dev)==="warn").length,nc=done.filter(m=>aStatus(m.dev)==="crit").length,inputW=sum(ms,m=>m.warns.length);
+  const freeQty=sum(packsArr().filter(p=>!packIds(p).length&&(UI.aPeriod==="all"||p.date>=addDays(todayStr(),-Number(UI.aPeriod)))),p=>num(p.qty));
+  const kpis=`<div class="calc">
+   <div class="kpi hero"><div class="l">종합 수율 (해동 기준)</div><div class="v">${pct(a.tot)}</div><div class="d">${aPill(s)} 기준 ${pct(a.stdTot)} 대비 ${sgn(a.dev)}%p</div></div>
+   <div class="kpi"><div class="l">${a.won==null||a.won>=0?"기준 대비 손실 금액":"기준 대비 절감 금액"}</div><div class="v">${a.won==null?"–":won(a.won)}</div><div class="d">${a.won==null?`<button class="linkbtn" data-act="goPrice">원료육 단가를 넣으면 계산됩니다</button>`:`원료 ${fmt(Math.abs(a.lossKg),0)}kg 상당${a.unpriced?` · 단가 없는 로트 ${a.unpriced}건 제외`:""}`}</div></div>
+   <div class="kpi"><div class="l">생산량</div><div class="v">${fmt(a.pack,0)}<small>kg</small></div><div class="d">${Math.round(a.qty).toLocaleString("ko-KR")}ea · ${a.n}로트 · 폐기 ${fmt(a.waste,1)}kg${freeQty?` · 로트 없는 기록 ${freeQty.toLocaleString("ko-KR")}ea`:""}</div></div>
+   <div class="kpi ${nc?"bad":nw||inputW||st.length?"warn":"ok"}"><div class="l">확인할 것</div><div class="v">${nw+nc+st.length}</div><div class="d">${nc?`경고 ${nc} · `:""}주의 ${nw} · 지연 ${st.length} · 입력 이상 ${inputW}</div></div></div>`;
+  const out=[],tol=num(S.cfg.tol)||10;
+  const pg=Object.entries(groupBy(done,m=>m.l.productId)).map(([k,v])=>({k,...aAgg(v)})).sort((x,y)=>x.dev-y.dev);
+  if(pg[0]&&pg[0].dev<-1)out.push({s:aStatus(pg[0].dev),t:`${prod(pg[0].k)?.name||"제품"} 종합 수율이 기준보다 ${Math.abs(pg[0].dev).toFixed(1)}%p 낮습니다`,d:`${pg[0].n}로트${pg[0].won!=null?` · 손실 약 ${won(Math.max(0,pg[0].won))}`:""}`,go:"공정 보기",act:"aGoFlow",v:"p:"+pg[0].k});
+  const rg=Object.entries(groupBy(ms.filter(m=>m.washDev!=null),m=>m.l.raw+" · "+(m.l.origin||""))).map(([k,v])=>({k,dev:sum(v,m=>m.washDev)/v.length})).sort((x,y)=>x.dev-y.dev);
+  if(rg[0]&&rg[0].dev<-tol/2)out.push({s:"warn",t:`원료 ${rg[0].k}의 세척 수율이 기준보다 평균 ${Math.abs(rg[0].dev).toFixed(1)}%p 낮습니다`,d:"세척 수율이 낮으면 원료 교체를 검토합니다",go:"비교 보기",act:"aView",v:"compare"});
+  const hg=ms.filter(m=>m.heatDev!=null&&m.heatDev<-tol);if(hg.length)out.push({s:"warn",t:`가열 수율이 기준보다 크게 낮은 로트 ${hg.length}건`,d:"가열 온도·시간을 확인합니다",go:"공정 보기",act:"aGoFlow",v:"l:"+hg[0].l.id});
+  const wg=workerRank(done,"packDev");if(wg[0]&&wg[0].dev<-3)out.push({s:"warn",t:`${wg[0].name} 작업 로트의 포장 수율이 기준보다 평균 ${Math.abs(wg[0].dev).toFixed(1)}%p 낮습니다`,d:"포장 수율이 낮으면 작업 방법을 확인합니다",go:"비교 보기",act:"aView",v:"compare"});
+  st.slice(0,3).forEach(o=>out.push({s:"warn",t:`${lotTitle(o.lots[0])} (B/L ${o.lots.map(l=>l.bl).join("+")}) — ${stalledU(o)}`,d:`출고 ${o.lots[0].releaseDate}`,go:"진행 현황",act:"aView",v:"board"}));
+  if(inputW){const f=ms.find(m=>m.warns.length);out.push({s:"crit",t:`입력값 확인이 필요한 로트 ${ms.filter(m=>m.warns.length).length}건`,d:f.warns[0].t,go:"로트 보기",act:"aGoFlow",v:"l:"+f.l.id})}
+  const lowR=rawsArr().filter(r=>{const x=rawRemain(r);return x>0&&x<(num(S.cfg.lowStock)||0)}),expR=rawsArr().filter(r=>rawRemain(r)>0&&r.rawExpiry&&r.rawExpiry<=addDays(todayStr(),30));
+  if(lowR.length)out.push({s:"warn",t:`재고가 ${fmtKg(num(S.cfg.lowStock))}kg 미만인 원료 ${lowR.length}건`,d:lowR.slice(0,3).map(r=>`${r.bl} ${fmtKg(rawRemain(r))}kg`).join(", "),go:"재고 보기",act:"goRaw",v:""});
+  if(expR.length)out.push({s:"warn",t:`소비기한이 30일 안에 끝나는 원료 ${expR.length}건`,d:expR.slice(0,3).map(r=>`${r.bl} ~${r.rawExpiry}`).join(", "),go:"재고 보기",act:"goRaw",v:""});
+  const lb=S.cfg.lastBackup,bd=lb&&lb.at?Math.round((new Date(todayStr())-new Date(lb.at.slice(0,10)))/864e5):null;
+  if(mode==="shared"&&(bd==null||bd>=7))out.push({s:"warn",t:bd==null?"아직 백업 파일을 내려받은 적이 없습니다":`마지막 백업 후 ${bd}일 지났습니다`,d:"사내 PC나 NAS에 보관하도록 주 1회 이상 내려받으세요",go:"백업하기",act:"goto",v:"settings"});
+  if(Object.keys(outbox).length)out.push({s:"warn",t:`이 기기에서 아직 저장되지 않은 기록 ${Object.keys(outbox).length}건`,d:"연결되면 자동으로 저장됩니다",go:""});
+  if(!out.length)out.push({s:"good",t:"모든 제품이 기준 범위 안에 있고 밀린 작업이 없습니다",d:"기준 대비 −1%p 이내",go:""});
+  const alerts=`<div class="card"><h3>지금 확인할 것</h3><div class="alerts">${out.map(o=>`<${o.act?"button":"div"} class="alert ${o.s}"${o.act?` data-act="${o.act}" data-v="${esc(o.v)}"`:""}><span class="ic ${o.s}" aria-hidden="true"></span><span class="tx">${esc(o.t)}<small>${esc(o.d)}</small></span><span class="go">${o.go?o.go+" →":""}</span></${o.act?"button":"div"}>`).join("")}</div></div>`;
+  const prank=rank(pg.map(r=>({name:prod(r.k)?.name||r.k,sub:`${pct(r.tot)} · 기준 ${pct(r.stdTot)} · ${r.n}로트`,dev:r.dev,meta:r.won!=null&&r.won>0?`<b>${won(r.won)}</b>`:"",act:"aGoFlow",v:"p:"+r.k})),"손실");
+  return kpis+stageTiles(a)+alerts+`<div class="grid2 even"><div class="card"><h3>제품별 기준 대비 종합 수율</h3><p class="formula" style="margin:-6px 0 10px">누르면 공정 흐름을 봅니다</p>${prank}</div>
+   <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">기간별 기준 대비 (포장일 기준)</h3><div class="seg" role="group" aria-label="보기 단위">${[["day","일"],["week","주"],["month","월"]].map(([k,t])=>`<button data-act="tUnit" data-v="${k}" aria-pressed="${UI.tUnit===k}">${t}</button>`).join("")}</div></div><p class="formula" style="margin:0 0 10px">점선: 주의 −1%p · 경고 −3%p · 기간 버튼(7일·30일…)과 함께 바뀝니다</p>${trendChart(done)}</div></div>${priceCard()}`}
+function trendChart(done){
+  const kf=UI.tUnit==="week"?weekStart:UI.tUnit==="month"?(d=>d.slice(0,7)):(d=>d),g=groupBy(done.filter(m=>m.dev!=null),m=>kf(m.date)),days=Object.keys(g).sort().slice(-30).map(d=>({d,...aAgg(g[d])}));
+  const lab=d=>UI.tUnit==="month"?d.slice(2).replace("-","."):UI.tUnit==="week"?d.slice(5).replace("-","/")+"~":d.slice(5).replace("-","/");
+  if(!days.length)return `<div class="empty">포장까지 끝난 로트가 없습니다.</div>`;
+  const W=640,H=230,m={l:40,r:16,t:16,b:30},lo=Math.min(-4,Math.floor(Math.min(...days.map(x=>x.dev))-.5)),hi=Math.max(2,Math.ceil(Math.max(...days.map(x=>x.dev))+.5));
+  const Y=v=>m.t+(hi-v)/(hi-lo)*(H-m.t-m.b),sl=(W-m.l-m.r)/Math.max(days.length,7),bw=Math.min(36,sl*.6),X=i=>m.l+sl*i+sl/2;let g2="";
+  for(let v=lo;v<=hi;v++)g2+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="${v===0?1.2:.6}"/><text x="${m.l-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${v>0?"+":""}${v}</text>`;
+  const ref=[[-1,"var(--warn)"],[-3,"var(--bad)"]].map(([v,c])=>`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="4 4"/>`).join("");
+  const bars=days.map((x,i)=>{const s=aStatus(x.dev),y1=Y(Math.max(0,x.dev)),y2=Y(Math.min(0,x.dev));return `<rect x="${X(i)-bw/2}" y="${y1}" width="${bw}" height="${Math.max(1.5,y2-y1)}" rx="2" fill="var(--${s==="good"?"pen":s==="warn"?"warn":"bad"})"><title>${x.d} · ${sgn(x.dev)}%p · ${x.n}로트</title></rect>`+((days.length<=10||i%Math.ceil(days.length/8)===0)?`<text x="${X(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--muted)">${lab(x.d)}</text>`:"")}).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="일별 기준 대비 종합 수율">${g2}${ref}${bars}<text x="${m.l-6}" y="10" text-anchor="end" font-size="11" fill="var(--muted)">%p</text></svg>`}
+function priceCard(){return `<div class="card" id="priceCard"><h3>손실 금액 계산용 원료육 단가 <span class="chip s2">관리자만 보임</span></h3>
+  <p class="formula" style="margin:-4px 0 12px">손실 금액 = (해동 후 중량 − (포장+잔량+폐기) ÷ 기준 종합 수율) × 원료육 kg 단가 · 기준 종합 수율 = 세척 기준 × 포장 기준</p>
+  <div class="fields">${prodArr().map(p=>`<label class="f"><b>${esc(p.name)}</b><span class="unit"><input class="num" inputmode="numeric" data-price="${p.id}" value="${esc(S.prices[p.id]??"")}" placeholder="0"><span>원/kg</span></span></label>`).join("")}</div>
+  <div class="row end" style="margin-top:12px"><button class="btn primary" data-act="savePrices">단가 저장</button></div></div>`}
+function savePrices(){const o={};$$("[data-price]").forEach(i=>{const v=num(i.value);if(v!=null)o[i.dataset.price]=v});put("admin/prices",o);logEvent("단가 변경",Object.entries(o).map(([k,v])=>`${prod(k)?.name||k} ${v}원`).join(", "));toast("단가를 저장했습니다")}
+
+function aFlow(){
+  const ms=aLots().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const firstDone=ms.find(m=>m.done),sel=UI.flowSel||(firstDone?"l:"+firstDone.l.id:"");
+  let title="",sub="",f=null,rows=[],stdP=null;
+  if(sel.startsWith("l:")&&S.lots[sel.slice(2)]){const l=S.lots[sel.slice(2)],ids=unitIds(l),o=calcUnit(ids);stdP=prod(l.productId);
+    title=`${unitTitle({ids,lot:l})} · B/L ${unitBL({ids})}`;sub=`출고 ${l.releaseDate} · 세척 ${l.wash?.date||"–"}${l.heat?.date?" · 가열 "+l.heat.date:""} · 포장 ${lastPackDate(l)||"–"}`;f=o.nPacks?o:null;rows=ids.map(id=>am(S.lots[id]))}
+  else if(sel.startsWith("p:")){const pid=sel.slice(2),list=ms.filter(m=>m.done&&m.l.productId===pid);stdP=prod(pid);title=`${stdP?.name||""} · 기간 합계`;sub=`포장 완료 로트 ${list.length}건`;
+    if(list.length){f=ratios(sumRaw(list.map(m=>raw(m.l))))}rows=list}
+  const opts=`<select data-act="flowSel" style="width:auto;max-width:100%"><optgroup label="제품 합계">${prodArr().map(p=>`<option value="p:${p.id}" ${sel==="p:"+p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</optgroup><optgroup label="로트">${ms.map(m=>`<option value="l:${m.l.id}" ${sel==="l:"+m.l.id?"selected":""}>${esc(m.l.bl)} · ${esc(lotTitle(m.l))}</option>`).join("")}</optgroup></select>`;
+  let stage="";if(rows.length){const a=aAgg(rows),p=stdP||{},rel=sum(rows,m=>m.rel),th=sum(rows,m=>m.thaw),tol=num(S.cfg.tol)||10;
+    const it=[{name:"해동 (출고 대비)",sub:`${fmt(rel,0)} → ${fmt(th,0)}kg · 기준 없음`,dev:null,meta:pct(rel?th/rel:null)},
+      {name:"세척",sub:`${pct(a.washY)} · 기준 ${p.stdWash??"–"}%`,dev:a.washY!=null&&num(p.stdWash)?a.washY*100-p.stdWash:null,meta:"세척 ÷ 해동"},
+      ...(a.heatY!=null||p.needsHeat?[{name:"가열 (2차)",sub:`${pct(a.heatY)} · 기준 ${p.stdHeat??"미정"}${p.stdHeat!=null?"%":""}`,dev:a.heatY!=null&&num(p.stdHeat)?a.heatY*100-p.stdHeat:null,meta:"가열 후 ÷ 가열 전"}]:[]),
+      {name:"포장",sub:`${pct(a.packY)} · 기준 ${p.stdPack??"–"}%`,dev:a.packY!=null&&num(p.stdPack)?a.packY*100-p.stdPack:null,meta:"(포장+잔량+폐기) ÷ 세척"},
+      {name:"종합",sub:`${pct(a.tot)} · 기준 ${pct(a.stdTot)}`,dev:a.dev,meta:"(포장+잔량+폐기) ÷ 해동"}];
+    stage=rank(it.map(i=>({...i,st:i.dev==null?"run":i.name==="종합"?aStatus(i.dev):Math.abs(i.dev)>tol?"crit":aStatus(i.dev)})),"계산식")}
+  const lotRows=ms.map(m=>`<tr class="click${sel==="l:"+m.l.id?" sel":""}" data-act="flowLot" data-v="${m.l.id}" tabindex="0"><td>${esc(m.date)}</td><td>${esc(m.l.bl)}${m.group?` <span class="chip">묶음</span>`:""}<small>${esc(m.l.raw)} · ${esc(m.l.origin||"")}</small></td><td>${esc(lotTitle(m.l))}</td>
+    <td class="n">${fmtKg(m.thaw)} → ${m.done?fmt(m.packKg,0):"–"}</td><td class="n">${pct(m.washYield)}</td><td class="n">${pct(m.heatYield)}</td><td class="n">${pct(m.packYield)}</td><td class="n">${m.dev!=null?sgn(m.dev)+"%p":"–"}</td><td class="n">${m.won!=null?won(m.won):"–"}</td>
+    <td>${m.done?aPill(aStatus(m.dev)):`<span class="chip ${m.stageCls}">${m.stageLabel}</span>`}${m.warns.length?` <span class="chip bad">입력 확인 ${m.warns.length}</span>`:""}</td></tr>`).join("");
+  const ws=rows.flatMap(m=>m.warns.map(w=>({...w,bl:m.l.bl})));
+  return `<div class="card" style="display:grid;gap:12px"><div class="row" style="justify-content:space-between"><div><h3 style="margin:0">공정별 중량 흐름</h3><p class="formula" style="margin:2px 0 0">${esc(title)} · ${esc(sub)}</p></div>${opts}</div>
+   <div class="legend"><span><i style="background:var(--pen)"></i>투입·완제품</span><span><i style="background:var(--loss)"></i>감량·손실</span><span><i style="background:var(--gain)"></i>증량(물·양념)</span><span><i style="background:var(--line)"></i>출고 라벨 중량(참고)</span></div>
+   ${f?waterfall(f):`<div class="empty">포장까지 끝난 로트를 고르면 흐름이 보입니다.</div>`}${stage?`<div>${stage}</div>`:""}${rows.length?stageTiles(aAgg(rows),"출고 서류 중량을 기준으로 한 미팅 기준 3단계 수율입니다."):""}
+   ${ws.length?`<ul class="warns">${ws.map(w=>`<li class="${w.lv}">${esc(w.bl)} — ${esc(w.t)}</li>`).join("")}</ul>`:""}</div>
+  <div class="card"><h3>로트 목록 (최신순)</h3><p class="formula" style="margin:-6px 0 10px">누르면 위 흐름이 그 로트로 바뀝니다</p>
+   <div class="tbl-wrap"><table class="t"><thead><tr><th>날짜</th><th>이력·B/L</th><th>제품</th><th>해동 → 포장 kg</th><th>세척</th><th>가열</th><th>포장</th><th>기준 대비</th><th>손실</th><th>상태</th></tr></thead><tbody>${lotRows}</tbody></table></div></div>`}
+function waterfall(o){
+  const bars=[{lab:"출고(라벨)",k:"ref",a:0,b:o.rel},{lab:"해동 후",k:"tot",a:0,b:o.thaw}];let run=o.thaw;
+  const step=(lab,d)=>{if(!d||Math.abs(d)<0.005)return;bars.push({lab,k:d<0?"loss":"gain",a:run,b:run+d,d});run+=d};
+  step("세척",o.wash-o.thaw);
+  if(o.heatOut!=null&&o.heatIn!=null){step("양념 등",o.heatIn-o.wash);step("가열 감량",o.heatOut-o.heatIn);step("기타 가공",o.acc-o.heatOut)}
+  else{step("양념",o.sauceKg);step("가공 감량",o.acc-o.wash-o.sauceKg)}
+  step("잔량",-o.remainKg);step("폐기",-o.wasteKg);bars.push({lab:"완제품",k:"tot",a:0,b:o.packKg});
+  const W=Math.max(680,bars.length*82),H=260,m={l:48,r:8,t:24,b:40},mx=Math.max(...bars.map(b=>Math.max(b.a,b.b)))*1.1,n=bars.length,bw=(W-m.l-m.r)/n,Y=v=>m.t+(1-v/mx)*(H-m.t-m.b);
+  const tick=Math.pow(10,Math.floor(Math.log10(mx/4))),stp=[1,2,5].map(k=>k*tick).find(x=>mx/x<=6)||tick*10;let g="";
+  for(let v=0;v<=mx;v+=stp)g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".6"/><text x="${m.l-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${Math.round(v).toLocaleString("ko-KR")}</text>`;
+  const col={tot:"var(--pen)",loss:"var(--loss)",gain:"var(--gain)",ref:"var(--line)"};
+  const r=bars.map((b,i)=>{const x=m.l+i*bw+bw*.17,w=bw*.66,y1=Y(Math.max(b.a,b.b)),h=Math.max(2,Y(Math.min(b.a,b.b))-y1),val=b.d==null?fmt(b.b,0):(b.d<0?"−":"+")+fmt(Math.abs(b.d),Math.abs(b.d)<10?1:0);
+    const conn=i>0&&i<n-1&&b.k!=="ref"?`<line x1="${x+w}" x2="${x+bw}" y1="${Y(b.b)}" y2="${Y(b.b)}" stroke="var(--muted)" stroke-dasharray="2 2"/>`:"";
+    return `<rect x="${x}" y="${y1}" width="${w}" height="${h}" rx="3" fill="${col[b.k]}"><title>${b.lab} ${val}kg</title></rect>${conn}<text x="${x+w/2}" y="${y1-6}" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink)">${val}</text><text x="${x+w/2}" y="${H-m.b+17}" text-anchor="middle" font-size="11.5" fill="var(--muted)">${b.lab}</text>`}).join("");
+  return `<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:560px;height:auto;max-height:320px" role="img" aria-label="공정별 중량 흐름">${g}<text x="${m.l-6}" y="12" text-anchor="end" font-size="11" fill="var(--muted)">kg</text>${r}</svg></div>
+  <p class="formula" style="margin:0">${o.heatOut!=null?"가열 감량 = 가열 후 − 가열 전. 기타 가공 = (포장+잔량+폐기) − 가열 후 중량.":"가공 감량 = (포장+잔량+폐기) − (세척 중량+양념). 저울에 따로 달지 않는 정형·이물 제거·가열·포장 중 손실입니다."}</p>`}
+function workerRank(ms,dk){const g={};ms.forEach(m=>{if(m[dk]==null)return;let names;
+    if(dk==="packDev")names=[...new Set(packsOf(m.l.id).map(p=>p.by).filter(Boolean))];else if(dk==="washDev")names=[m.l.wash&&m.l.wash.by].filter(Boolean);else names=[m.l.heat&&m.l.heat.by].filter(Boolean);
+    if(!names.length)names=["(입력자 없음)"];names.forEach(n=>(g[n]=g[n]||[]).push(m))});
+  return Object.entries(g).map(([k,v])=>({name:k,sub:`${v.length}로트`,dev:sum(v,m=>m[dk])/v.length,meta:v.slice(0,3).map(m=>esc(String(m.l.bl).slice(-4))).join(", ")})).sort((a,b)=>a.dev-b.dev)}
+function aCompare(){
+  const ms=aLots(),tol=num(S.cfg.tol)||10,st=d=>Math.abs(d)>tol*2?"crit":Math.abs(d)>tol?"warn":"good";
+  const raw_=Object.entries(groupBy(ms.filter(m=>m.washDev!=null),m=>m.l.raw+"|"+(m.l.origin||""))).map(([k,v])=>{const [r,o]=k.split("|"),th=sum(v,m=>m.thaw),w=sum(v,m=>m.wash);
+    return {name:r,sub:`${o} · ${v.length}로트 · 세척 ${pct(w/th)}`,dev:sum(v,m=>m.washDev*m.thaw)/th,meta:`해동/출고 ${pct(th/sum(v,m=>m.rel))}`}}).sort((a,b)=>a.dev-b.dev);
+  const packBy=workerRank(ms.filter(m=>m.done),"packDev"),washBy=workerRank(ms,"washDev"),heatBy=workerRank(ms,"heatDev");
+  return `<div class="banner" style="background:var(--pen-soft);color:var(--ink)">대표님 기준: <b>세척 수율이 낮으면 원료</b>를, <b>포장 수율이 낮으면 작업자</b>를 확인합니다. 막대는 제품별 기준과의 차이(%p)이며, ±${tol}%p를 넘으면 주의로 표시합니다.</div>
+  <div class="card"><h3>원료별 세척 수율</h3><p class="formula" style="margin:-6px 0 10px">원료육 품명·원산지별, 해동 중량으로 가중 평균</p>${rank(raw_.map(r=>({...r,st:st(r.dev)})),"참고")}</div>
+  <div class="grid2 even"><div class="card"><h3>포장 작업자별 포장 수율</h3><p class="formula" style="margin:-6px 0 10px">④ 포장 입력자 기준 · 오른쪽은 최근 로트 B/L 끝자리</p>${rank(packBy.map(r=>({...r,st:st(r.dev)})),"로트")}</div>
+   <div class="card"><h3>세척 입력자별 세척 수율</h3><p class="formula" style="margin:-6px 0 10px">② 세척 입력자 기준</p>${rank(washBy.map(r=>({...r,st:st(r.dev)})),"로트")}</div></div>
+  ${heatBy.length?`<div class="card"><h3>가열 입력자별 가열 수율</h3>${rank(heatBy.map(r=>({...r,st:st(r.dev)})),"로트")}</div>`:""}
+  <p class="formula">작업자 비교는 ‘기준·백업’의 직원 명단에서 고른 이름으로 묶입니다.</p>`}
+function aBoard(){
+  const U=unitsOf(lotsArr()).map(u=>({u,o:calcUnit(u.ids)})),done=U.filter(x=>x.o.stage==="done").sort((a,b)=>lastPackDate(b.u.lot).localeCompare(lastPackDate(a.u.lot))).slice(0,8);
+  const cols=[["세척 대기",U.filter(x=>x.o.stage==="wash")],["가열 대기",U.filter(x=>x.o.stage==="heat")],["포장 대기·포장 중",U.filter(x=>x.o.stage==="pack"||x.o.stage==="packing")],["최근 포장 완료",done]];
+  return `<div class="board">${cols.map(([name,list])=>`<div class="lane"><div class="lane-h">${name} <b>${list.length}</b></div>
+   ${list.length?list.map(({u,o})=>{const sl=stalledU(o),m=am(u.lot),s=o.stage==="done"?aStatus(m.dev):sl?"warn":"run";return `<button class="bcard ${s}" data-act="aGoFlow" data-v="l:${u.lot.id}">
+    <span class="bt">${esc(unitTitle(u))}</span><span class="formula">B/L ${esc(unitBL(u))} · 출고 ${esc(u.lot.releaseDate)} ${fmtKg(o.rel)}kg</span>
+    ${o.wash!=null?`<span class="formula">세척 ${fmtKg(o.wash)}kg · ${pct(o.washYield)}${o.heatYield!=null?` · 가열 ${pct(o.heatYield)}`:""}${o.qty?` · 포장 ${Math.round(o.qty)}ea`:""}</span>`:`<span class="formula">세척 예정 ${esc(u.lot.planWashDate||"–")}</span>`}
+    ${o.stage==="done"?`<span>${aPill(s)} <span class="formula">포장 수율 ${pct(o.packYield)}</span></span>`:`<span class="chip ${o.stageCls}" style="justify-self:start">${o.stageLabel}</span>`}
+    ${sl?`<span class="chip s1">${esc(sl)}</span>`:""}${o.warns.length?`<span class="chip bad">입력 확인 ${o.warns.length}</span>`:""}</button>`}).join(""):`<div class="empty">없음</div>`}</div>`).join("")}</div>`}
+
+/* 주간·월간 보고서 */
+const weekStart=s=>{const d=new Date(s+"T00:00:00"),k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return dstr(d)};
+function periodKeys(type,n){const out=[],t=todayStr();if(type==="week"){let k=weekStart(t);for(let i=0;i<n;i++){out.push(k);k=addDays(k,-7)}}else{const d=new Date(t+"T00:00:00");for(let i=0;i<n;i++){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(x.getFullYear()+"-"+pad(x.getMonth()+1))}}return out}
+const inPer=(type,key,date)=>!!date&&(type==="week"?date>=key&&date<=addDays(key,6):date.startsWith(key));
+const perLabel=(type,key)=>type==="week"?`${key.slice(5).replace("-","/")} ~ ${addDays(key,6).slice(5).replace("-","/")}`:`${key.slice(0,4)}년 ${Number(key.slice(5))}월`;
+function periodData(type,key){const ms=lotsArr().map(am).filter(m=>m.done&&inPer(type,key,m.date)),free=packsArr().filter(p=>!packIds(p).length&&inPer(type,key,p.date));return {ms,a:aAgg(ms),free}}
+function aReport(){
+  const keys=periodKeys(UI.rType,UI.rType==="week"?12:12);if(!keys.includes(UI.rKey))UI.rKey=keys[0];
+  const cur=periodData(UI.rType,UI.rKey),prevKey=UI.rType==="week"?addDays(UI.rKey,-7):periodKeys("month",24)[periodKeys("month",24).indexOf(UI.rKey)+1],prev=periodData(UI.rType,prevKey);
+  const d=(a,b,f=1)=>a==null||b==null?"":`<span class="${a-b>=0?"pen":"muted"}">${a-b>=0?"▲":"▼"} ${Math.abs(a-b).toFixed(f)}</span>`;
+  const byP=Object.entries(groupBy(cur.ms,m=>m.l.productId)).map(([k,v])=>({p:prod(k),a:aAgg(v)}));
+  const freeBy=Object.entries(groupBy(cur.free,p=>p.productName)).map(([k,v])=>({name:k,qty:sum(v,p=>num(p.qty)),kg:sum(v,p=>num(p.qty)*num(p.sizeKg)),n:v.length}));
+  const trendKeys=periodKeys(UI.rType,UI.rType==="week"?8:6).reverse(),tr=trendKeys.map(k=>({k,...periodData(UI.rType,k)}));
+  UI._report={cur,byP,freeBy,tr};
+  return `<div class="card" style="display:grid;gap:12px"><div class="row" style="justify-content:space-between">
+    <div class="row"><div class="seg" role="group" aria-label="보고서 단위"><button data-act="rType" data-v="week" aria-pressed="${UI.rType==="week"}">주간</button><button data-act="rType" data-v="month" aria-pressed="${UI.rType==="month"}">월간</button></div>
+    <select data-act="rKey" style="width:auto">${keys.map(k=>`<option value="${k}" ${k===UI.rKey?"selected":""}>${perLabel(UI.rType,k)}</option>`).join("")}</select></div>
+    <button class="btn" data-act="dlReport">보고서 엑셀(.xlsx)</button></div>
+   <p class="formula" style="margin:0">포장이 끝난 날짜 기준으로 묶습니다. ▲▼는 ${UI.rType==="week"?"전주":"전월"} 대비입니다.</p></div>
+  <div class="calc"><div class="kpi hero"><div class="l">종합 수율 (해동 기준)</div><div class="v">${pct(cur.a.tot)}</div><div class="d">기준 대비 ${sgn(cur.a.dev)}%p ${d(cur.a.tot!=null?cur.a.tot*100:null,prev.a.tot!=null?prev.a.tot*100:null)}</div></div>
+   <div class="kpi"><div class="l">생산량</div><div class="v">${fmt(cur.a.pack+sum(cur.free,p=>num(p.qty)*num(p.sizeKg)),0)}<small>kg</small></div><div class="d">로트 ${cur.a.n}건 · 로트 없는 기록 ${cur.free.length}건 ${d(cur.a.pack,prev.a.pack,0)}</div></div>
+   <div class="kpi"><div class="l">손실 금액</div><div class="v">${cur.a.won==null?"–":won(cur.a.won)}</div><div class="d">${cur.a.unpriced?`단가 없는 로트 ${cur.a.unpriced}건 제외`:"기준 대비"}</div></div>
+   <div class="kpi"><div class="l">폐기</div><div class="v">${fmt(cur.a.waste,1)}<small>kg</small></div><div class="d">${d(cur.a.waste,prev.a.waste)}</div></div></div>
+  <div class="card"><h3>제품별</h3>${byP.length?`<div class="tbl-wrap"><table class="t"><thead><tr><th>제품</th><th>로트</th><th>해동kg</th><th>세척kg</th><th>세척</th><th>가열</th><th>포장ea</th><th>포장kg</th><th>포장</th><th>종합</th><th>기준 대비</th><th>폐기kg</th><th>손실</th></tr></thead><tbody>
+   ${byP.map(({p,a})=>`<tr><td>${esc(p?.name||"")}</td><td class="n">${a.n}</td><td class="n">${fmt(a.thaw,0)}</td><td class="n">${fmt(a.wash,0)}</td><td class="n">${pct(a.washY)}</td><td class="n">${pct(a.heatY)}</td><td class="n">${Math.round(a.qty).toLocaleString("ko-KR")}</td><td class="n">${fmt(a.pack,0)}</td><td class="n">${pct(a.packY)}</td><td class="n">${pct(a.tot)}</td><td class="n ${a.dev<-3?"chip-bad":a.dev<-1?"chip-warn":""}">${sgn(a.dev)}%p</td><td class="n">${fmt(a.waste,1)}</td><td class="n">${won(a.won)}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty">이 기간에 포장이 끝난 로트가 없습니다.</div>`}</div>
+  ${freeBy.length?`<div class="card"><h3>로트 없이 기록한 제품</h3><div class="tbl-wrap"><table class="t" style="min-width:420px"><thead><tr><th>제품</th><th>기록</th><th>수량ea</th><th>중량kg</th></tr></thead><tbody>${freeBy.map(r=>`<tr><td>${esc(r.name)}</td><td class="n">${r.n}</td><td class="n">${r.qty.toLocaleString("ko-KR")}</td><td class="n">${fmt(r.kg,1)}</td></tr>`).join("")}</tbody></table></div></div>`:""}
+  <div class="card"><h3>${UI.rType==="week"?"최근 8주":"최근 6개월"} 추이</h3><div class="tbl-wrap"><table class="t" style="min-width:560px"><thead><tr><th>기간</th><th>로트</th><th>생산kg</th><th>종합 수율</th><th>기준 대비</th><th>폐기kg</th><th>손실</th></tr></thead><tbody>
+   ${tr.map(x=>`<tr${x.k===UI.rKey?' class="sel"':""}><td>${perLabel(UI.rType,x.k)}</td><td class="n">${x.a.n}</td><td class="n">${fmt(x.a.pack+sum(x.free,p=>num(p.qty)*num(p.sizeKg)),0)}</td><td class="n">${pct(x.a.tot)}</td><td class="n">${x.a.n?sgn(x.a.dev)+"%p":"–"}</td><td class="n">${fmt(x.a.waste,1)}</td><td class="n">${won(x.a.won)}</td></tr>`).join("")}</tbody></table></div></div>`}
+function dlReport(){const R=UI._report;if(!R||!window.XLSX){toast("보고서를 만들지 못했습니다");return}const r2=v=>v==null||!isFinite(v)?null:+(+v).toFixed(2);
+  const name=`수율보고서_${UI.rType==="week"?"주간":"월간"}_${UI.rKey}`,wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["기간",perLabel(UI.rType,UI.rKey)],["종합 수율%",r2(R.cur.a.tot*100)],["기준 대비 %p",r2(R.cur.a.dev)],["포장 kg",r2(R.cur.a.pack)],["포장 ea",Math.round(R.cur.a.qty)],["폐기 kg",r2(R.cur.a.waste)],["손실 금액(원)",r2(R.cur.a.won)],["로트 수",R.cur.a.n]]),"요약");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["제품","로트","해동kg","세척kg","세척%","가열%","포장ea","포장kg","포장%","종합%","기준대비%p","폐기kg","손실원"],...R.byP.map(({p,a})=>[p?.name,a.n,r2(a.thaw),r2(a.wash),r2(a.washY*100),r2(a.heatY*100),Math.round(a.qty),r2(a.pack),r2(a.packY*100),r2(a.tot*100),r2(a.dev),r2(a.waste),r2(a.won)])]),"제품별");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["포장일","B/L","제품","해동kg","세척kg","세척%","가열%","포장kg","포장%","종합%","기준대비%p","손실원"],...R.cur.ms.map(m=>[m.date,m.l.bl,lotTitle(m.l),r2(m.thaw),r2(m.wash),r2(m.washYield*100),r2(m.heatYield*100),r2(m.packKg),r2(m.packYield*100),r2(m.tot*100),r2(m.dev),r2(m.won)])]),"로트별");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["제품","기록","수량ea","중량kg"],...R.freeBy.map(r=>[r.name,r.n,r.qty,r2(r.kg)])]),"로트없는기록");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["기간","로트","생산kg","종합%","기준대비%p","폐기kg","손실원"],...R.tr.map(x=>[perLabel(UI.rType,x.k),x.a.n,r2(x.a.pack),r2(x.a.tot*100),r2(x.a.dev),r2(x.a.waste),r2(x.a.won)])]),"추이");
+  save(name+".xlsx",new Uint8Array(XLSX.write(wb,{type:"array",bookType:"xlsx"})))}
+
+/* 변경 기록 */
+function aLog(){
+  const docs=Object.values(S.logs),dates=[...new Set(docs.map(d=>d.date))].sort().reverse();if(!dates.includes(UI.logDate)&&dates.length&&UI.logDate!=="all")UI.logDate=dates[0];
+  const q=UI.logQ.trim();let E=docs.filter(d=>UI.logDate==="all"||d.date===UI.logDate).flatMap(d=>(d.entries||[]).map(e=>({...e,dev:d.dev})));
+  if(q)E=E.filter(e=>(e.who+e.act+e.d).includes(q));E.sort((a,b)=>b.t.localeCompare(a.t));UI._log=E;
+  return `<div class="card" style="display:grid;gap:12px"><div class="row" style="justify-content:space-between"><div class="row">
+   <select data-act="logDate" style="width:auto"><option value="all" ${UI.logDate==="all"?"selected":""}>최근 60일 전체</option>${dates.map(d=>`<option value="${d}" ${d===UI.logDate?"selected":""}>${d} (${dow(d)})</option>`).join("")}</select>
+   <input id="logQ" placeholder="이름·B/L·내용 검색" value="${esc(UI.logQ)}" style="width:220px"></div><button class="btn" data-act="dlLog">변경 기록 엑셀(.xlsx)</button></div>
+   <p class="formula" style="margin:0">누가 언제 무엇을 입력·수정·삭제했는지 남습니다. 기기마다 하루 단위로 따로 저장되어 서로 덮어쓰지 않습니다.</p></div>
+  <div class="card">${E.length?`<div class="tbl-wrap"><table class="t"><thead><tr><th>시각</th><th>입력자</th><th>작업</th><th>내용</th><th>기기</th></tr></thead><tbody>${E.slice(0,500).map(e=>`<tr><td>${esc(lt(e.t).slice(5))}</td><td>${esc(e.who)}</td><td><span class="chip ${/삭제/.test(e.act)?"bad":/수정|변경/.test(e.act)?"s1":"s2"}">${esc(e.act)}</span></td><td style="white-space:normal;min-width:280px">${esc(e.d)}</td><td class="muted">${esc(e.dev)}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty">기록이 없습니다.</div>`}</div>`}
+function dlLog(){if(!window.XLSX||!UI._log)return;const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["시각","입력자","작업","내용","기기"],...UI._log.map(e=>[lt(e.t),e.who,e.act,e.d,e.dev])]),"변경기록");
+  save(`변경기록_${UI.logDate}.xlsx`,new Uint8Array(XLSX.write(wb,{type:"array",bookType:"xlsx"})))}
+function applyRole(){$$('#tabs [data-admin]').forEach(b=>b.hidden=!UI.isAdmin);if(!UI.isAdmin&&ADMIN_TABS.includes(UI.tab))setTab("home")}
+
+/* ───────── 예시 데이터 (이 기기 저장 모드용) ───────── */
+function sample(){
+  const products={
+    p_kimsabu:{name:"김사부의 돼지막창 - 2kg",workName:"훈제 머리꼬리",sizeKg:2,stdWash:105,stdPack:80,needsHeat:false,stdHeat:null,expiryDays:363,origin:"캐나다산",sauce:"훈초벌 양념소스",logTitle:"생산일지",logSub:"(통 초벌/훈제막창)"},
+    p_hoesaek:{name:"회색 숙성돼지막창 - 2kg",workName:"생막창",sizeKg:2,stdWash:105,stdPack:104,needsHeat:false,stdHeat:null,expiryDays:455,origin:"외국산",sauce:"생막창 양념소스",logTitle:"생산일지(생막창)",logSub:"(숙성돼지막창-회색/갈색/제일/안지랑/신풍/소덤소덤/성주/마시볼/미진)"}};
+  const base={raw:"(돈막창)하이라이프",origin:"캐나다산",releaseDate:"2026-10-17",releaseKg:800,soakDate:"2026-10-18",planWashDate:"2026-10-19",note:"예시(10/17~20 일지)",packDone:true};
+  const lots={
+    L_sample_407766:{...base,bl:"905002407766",rawExpiry:"2028-02-09",productId:"p_hoesaek",wash:{date:"2026-10-19",thawKg:900,kg:947,aKg:null,fatKg:null,wasteKg:null,by:""},createdAt:"2026-10-17T08:00:00"},
+    L_sample_408176:{...base,bl:"905002408176",rawExpiry:"2028-06-22",productId:"p_kimsabu",wash:{date:"2026-10-19",thawKg:701,kg:758,aKg:null,fatKg:null,wasteKg:null,by:""},createdAt:"2026-10-17T08:01:00"}};
+  const packs={
+    pk1:{lotIds:["L_sample_407766"],lotId:"L_sample_407766",date:"2026-10-20",productId:"p_hoesaek",productName:"회색 숙성돼지막창 - 2kg",sizeKg:2,qty:492,remainG:1250,wasteG:465,expiry:"2028-01-18",origin:"외국산",start:"11:45",end:"14:50",sauceName:"생막창 양념소스",sauceKg:41,sauceExpiry:"2027-04-19",by:"",createdAt:"2026-10-20T14:50:00"},
+    pk2:{lotIds:["L_sample_408176"],lotId:"L_sample_408176",date:"2026-10-20",productId:"p_kimsabu",productName:"김사부의 돼지막창 - 2kg",sizeKg:2,qty:308,remainG:1850,wasteG:1200,expiry:"2027-10-18",origin:"캐나다산",start:"16:10",end:"17:35",sauceName:"훈초벌 양념소스",sauceKg:35.3,sauceExpiry:"2027-04-19",by:"",createdAt:"2026-10-20T17:35:00"}};
+  return {products,lots,packs}}
+
+
+/* ───────── 3단계 수율 (미팅 기준) ───────── */
+function stageTiles(a,note){return `<div class="card"><h3>3단계 수율 <span class="chip">출고 서류 중량 대비</span></h3><div class="calc">
+  <div class="kpi"><div class="l">1차 · 세정·가공 후</div><div class="v">${pct(a.s1)}</div><div class="d">세척 ÷ 출고</div></div>
+  <div class="kpi"><div class="l">2차 · 가열 후 (가열 제품)</div><div class="v">${pct(a.s2)}</div><div class="d">가열 후 ÷ 출고</div></div>
+  <div class="kpi"><div class="l">3차 · 포장 후 양품</div><div class="v">${pct(a.s3)}</div><div class="d">포장 ÷ 출고</div></div></div>
+  <p class="formula" style="margin:10px 0 0">${note||"10/6 미팅에서 정한 측정 지점입니다. 작업일지 계산식(세척 ÷ 해동 등)은 공정별 수율로 따로 보여 줍니다."}</p></div>`}
+
+/* ───────── 원료 수불 대장 ───────── */
+function ledgerSheet(D){
+  const mon=D.slice(0,7),start=mon+"-01",y=+mon.slice(0,4),m=+mon.slice(5);
+  const rows=[];let tIn=0,tOut=0;
+  rawsArr().forEach(r=>{const outs=Object.values(S.lots).filter(l=>!l.deleted&&l.rawId===r.id).sort((a,b)=>(a.releaseDate||"").localeCompare(b.releaseDate||""));
+    let bal=(r.inDate<start?num(r.inKg)||0:0)-sum(outs.filter(l=>l.releaseDate<start),l=>num(l.releaseKg));
+    const mv=[];if(r.inDate&&r.inDate.startsWith(mon))mv.push({d:r.inDate,in:num(r.inKg),out:0,note:r.supplier||"입고"});
+    outs.filter(l=>(l.releaseDate||"").startsWith(mon)).forEach(l=>mv.push({d:l.releaseDate,in:0,out:num(l.releaseKg),note:"→ "+lotTitle(l)}));
+    if(!mv.length&&bal<=0)return;mv.sort((a,b)=>a.d.localeCompare(b.d)||(b.in-a.in));
+    if(bal>0)rows.push({r,d:start,in:null,out:null,bal,note:"전월 이월"});
+    mv.forEach(x=>{bal+=x.in-x.out;tIn+=x.in;tOut+=x.out;rows.push({r,d:x.d,in:x.in,out:x.out,bal,note:x.note})})});
+  const loose=lotsArr().filter(l=>!l.rawId&&(l.releaseDate||"").startsWith(mon));
+  const tr=x=>`<tr><td>${esc(yymmdd(x.d))}</td><td class="l">${esc(x.r.raw)}</td><td>${esc(x.r.bl)}</td><td>${esc(x.r.origin||"")}</td><td>${esc(x.r.rawExpiry||"")}</td><td class="r">${x.in?H(fmtKg(x.in)):""}</td><td class="r">${x.out?H(fmtKg(x.out)):""}</td><td class="r">${H(fmtKg(x.bal))}</td><td class="l">${esc(x.note)}</td></tr>`;
+  return `<div class="row" style="justify-content:space-between;align-items:flex-start"><div class="ttl" style="text-align:left;letter-spacing:.1em">원료 수불 대장</div>${apprBox()}</div>
+  <div class="dline" style="margin-top:10px">${y}년 ${m}월${UI.site?" · "+esc(UI.site):""}</div>
+  <table><thead><tr><th style="width:62px">일자</th><th>품명</th><th>이력번호·B/L</th><th>원산지</th><th style="width:76px">소비기한</th><th>입고(kg)</th><th>출고(kg)</th><th>재고(kg)</th><th>비고</th></tr></thead><tbody>
+  ${rows.map(tr).join("")}${blank(14-rows.length,9)}<tr><td colspan="5">합계</td><td class="r">${H(fmtKg(tIn))}</td><td class="r">${H(fmtKg(tOut))}</td><td></td><td></td></tr></tbody></table>
+  ${loose.length?`<p style="font-size:11px;margin:4px 0">재고에 등록되지 않은 원료로 출고한 기록: ${loose.map(l=>`${esc(yymmdd(l.releaseDate))} B/L ${esc(l.bl)} ${fmtKg(num(l.releaseKg))}kg`).join(" · ")}</p>`:""}
+  <p style="font-size:10.5px;color:#555">입고는 ‘원료 입고·재고’, 출고는 ‘① 원료육 출고’에서 고른 원료 기준으로 자동 계산됩니다.</p>`}
+
+/* ───────── 수기 기록 대조 ───────── */
+const CHK_COLS=[["bl",/이력|b\/?l|^bl|로트|lot/i,"B/L"],["thaw",/해동/,"해동"],["wash",/세척|실사용|실 사용/,"세척"],["heat",/가열/,"가열 후"],["qty",/수량|ea/i,"포장수량"],["remain",/잔량/,"잔량(g)"],["waste",/폐기/,"폐기(g)"]];
+const CHK_LBL={thaw:"해동 kg",wash:"세척 kg",heat:"가열 후 kg",qty:"포장 수량",remain:"잔량 g",waste:"폐기 g"};
+function aCheck(){const r=UI.chk;
+  return `<div class="card" style="display:grid;gap:12px"><h3 style="margin:0">수기 기록 대조</h3>
+  <p class="formula" style="margin:0">지금 쓰는 수율 엑셀이나 종이 기록을 옮긴 파일을 올리면 B/L(이력번호)로 이 앱의 입력값과 맞춰 봅니다. 시범 기간에 두 값이 맞는지 확인한 뒤 수기 작성을 줄이면 됩니다. 올린 파일은 저장하지 않습니다.</p>
+  <div class="row"><label class="btn">엑셀·CSV 파일 올리기<input type="file" id="chkFile" accept=".xlsx,.xls,.csv,.txt" hidden></label><button class="btn" data-act="chkTemplate">빈 양식 내려받기 (최근 30일 로트)</button></div>
+  <textarea id="chkText" rows="4" placeholder="또는 엑셀에서 머리글째 복사해 붙여넣기 (예: 이력번호 · 해동 · 세척 · 포장수량 · 잔량 · 폐기)">${esc(UI.chkText||"")}</textarea>
+  <div class="row end"><button class="btn primary" data-act="chkRun">붙여넣은 내용 대조</button></div>
+  ${r?`<p class="formula" style="margin:0">${esc(r.src)} · 읽은 행 ${r.rows.length}개 · 찾은 열: ${esc(r.cols)}</p>`:""}</div>${r?chkResult(r):""}`}
+function chkParse(rows,src){
+  const hi=rows.slice(0,15).findIndex(r=>(r||[]).some(c=>CHK_COLS[0][1].test(String(c??"").trim())));
+  if(hi<0){toast("이력번호(B/L) 열을 찾지 못했습니다. 머리글에 ‘이력번호’나 ‘B/L’이 있어야 합니다");return}
+  const Hd=rows[hi].map(c=>String(c??"").trim()),idx={},used=new Set();
+  CHK_COLS.forEach(([k,re])=>{const i=Hd.findIndex((h,j)=>!used.has(j)&&re.test(h)&&!/수율|예상|기준/.test(h));if(i>=0){idx[k]=i;used.add(i)}});
+  const body=rows.slice(hi+1).filter(r=>r&&r[idx.bl]!=null&&String(r[idx.bl]).replace(/\D/g,"").length>=3);
+  UI.chk={src,cols:Object.keys(idx).map(k=>CHK_COLS.find(c=>c[0]===k)[2]+"="+Hd[idx[k]]).join(", "),
+    rows:body.map(r=>{const o={bl:String(r[idx.bl]).replace(/\D/g,"")};Object.keys(CHK_LBL).forEach(k=>{if(idx[k]!=null){const v=num(String(r[idx[k]]??"").replace(/[^\d.\-]/g,""));if(v!=null)o[k]=v}});return o})};
+  refresh();toast(`${UI.chk.rows.length}행을 읽었습니다`)}
+function chkTextRows(t){const lines=t.replace(/\r/g,"").split("\n").filter(x=>x.trim());const d=lines[0]&&lines[0].includes("\t")?"\t":",";return lines.map(l=>l.split(d).map(x=>x.replace(/^"|"$/g,"").trim()))}
+function appVals(l){const c=calc(l);return {thaw:c.thaw,wash:c.wash,heat:c.heatOut,qty:c.nPacks?Math.round(c.qty):null,remain:c.nPacks?Math.round(c.remainKg*1000):null,waste:c.nPacks?Math.round(c.wasteKg*1000):null}}
+function chkCause(k,app,paper,lotId){const d=paper-app;
+  if(Math.abs(d)<1&&Math.round(app)===Math.round(paper))return "정수 반올림";
+  if(app&&(Math.abs(paper/app-10)<.05||Math.abs(paper/app-.1)<.005))return "소수점 잘못 찍힘";
+  if(k!=="remain"&&k!=="waste"&&(Math.abs(paper/app-1000)<1||Math.abs(paper*1000-app)<1))return "단위(kg·g) 혼동";
+  const a=String(Math.round(app)),b=String(Math.round(paper));if(a.length===b.length&&a!==b&&[...a].sort().join("")===[...b].sort().join(""))return "자릿수 뒤바뀜";
+  const o=Object.values(S.lots).find(x=>!x.deleted&&x.id!==lotId&&appVals(x)[k]!=null&&Math.abs(appVals(x)[k]-paper)<.5);if(o)return `다른 로트 값 기입 (B/L ${o.bl})`;
+  if(app&&Math.abs(d/app)<=.03)return "저울 값 옮겨 적기 차이";return "원인 확인 필요"}
+function chkResult(r){
+  const byBl={};Object.values(S.lots).filter(l=>!l.deleted).forEach(l=>{byBl[String(l.bl).replace(/\D/g,"")]=l});
+  const items=[],missing=[];
+  r.rows.forEach(row=>{const l=byBl[row.bl];if(!l){missing.push(row.bl);return}const av=appVals(l);
+    Object.keys(CHK_LBL).forEach(k=>{if(row[k]==null)return;const app=av[k],tol=k==="qty"?0:k==="remain"||k==="waste"?5:0.5;
+      if(app==null){items.push({l,k,paper:row[k],app:null,st:"앱 미입력"});return}
+      const ok=Math.abs(row[k]-app)<=tol;items.push({l,k,paper:row[k],app,st:ok?"일치":chkCause(k,app,row[k],l.id),ok})})});
+  const inFile=new Set(r.rows.map(x=>x.bl)),notIn=lotsArr().filter(l=>l.releaseDate>=addDays(todayStr(),-30)&&l.wash&&!inFile.has(String(l.bl).replace(/\D/g,"")));
+  const bad=items.filter(x=>!x.ok),show=UI.chkAll?items:bad;
+  return `<div class="calc"><div class="kpi ok"><div class="l">일치</div><div class="v">${items.filter(x=>x.ok).length}</div><div class="d">항목 수 (kg ±0.5 · g ±5 · 수량 정확히)</div></div>
+   <div class="kpi ${bad.length?"bad":"ok"}"><div class="l">차이</div><div class="v">${bad.length}</div><div class="d">앱 값과 다른 항목</div></div>
+   <div class="kpi ${missing.length?"warn":""}"><div class="l">앱에 없는 B/L</div><div class="v">${missing.length}</div><div class="d">${esc(missing.slice(0,3).join(", "))}${missing.length>3?" 외":""}</div></div>
+   <div class="kpi"><div class="l">파일에 없는 로트</div><div class="v">${notIn.length}</div><div class="d">최근 30일 · 세척까지 입력된 로트</div></div></div>
+  <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">${UI.chkAll?"전체 항목":"차이 나는 항목"}</h3><label class="row" style="gap:6px;font-size:13px;color:var(--muted)"><input type="checkbox" data-act="chkAll" ${UI.chkAll?"checked":""} style="width:auto">일치한 항목도 보기</label></div>
+  ${show.length?`<div class="tbl-wrap"><table class="t"><thead><tr><th>B/L</th><th>제품</th><th>항목</th><th>수기 값</th><th>앱 값</th><th>차이</th><th>판정 · 추정 원인</th></tr></thead><tbody>
+  ${show.map(x=>`<tr><td>${esc(x.l.bl)}${calc(x.l).group?` <span class="chip">묶음</span>`:""}</td><td>${esc(lotTitle(x.l))}</td><td>${CHK_LBL[x.k]}</td><td class="n">${fmtKg(x.paper)}</td><td class="n">${fmtKg(x.app)}</td><td class="n">${x.app==null?"–":sgn(x.paper-x.app)}</td><td><span class="chip ${x.ok?"s3":x.st==="앱 미입력"?"s1":"bad"}">${esc(x.st)}</span></td></tr>`).join("")}</tbody></table></div>`:`<div class="empty">${items.length?"모든 항목이 일치합니다.":"맞춰 볼 항목이 없습니다. 열 머리글을 확인하세요."}</div>`}
+  <p class="formula" style="margin:8px 0 0">묶음 세척 로트는 앱에서 합계를 로트별로 나눠 기록하므로, 수기에 합계로 적었다면 차이로 보일 수 있습니다.</p></div>`}
+async function chkFile(f){try{
+  if(/\.(xlsx|xls)$/i.test(f.name)){if(!window.XLSX){toast("엑셀을 읽는 도구를 불러오지 못했습니다. CSV로 저장하거나 붙여넣어 주세요");return}
+    const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});const ws=wb.Sheets[wb.SheetNames[0]];chkParse(XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""}),f.name)}
+  else chkParse(chkTextRows(await f.text()),f.name)}catch{toast("파일을 읽지 못했습니다")}}
+function chkTemplate(){if(!window.XLSX){toast("엑셀 도구를 불러오지 못했습니다");return}
+  const L=lotsArr().filter(l=>l.releaseDate>=addDays(todayStr(),-30)).reverse();
+  const ws=XLSX.utils.aoa_to_sheet([["이력번호","제품","출고일","해동(kg)","세척(kg)","가열 후(kg)","포장수량(ea)","잔량(g)","폐기(g)"],...L.map(l=>[l.bl,lotTitle(l),l.releaseDate,"","","","","",""])]);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"수기기록");save(`수기기록_양식_${todayStr()}.xlsx`,new Uint8Array(XLSX.write(wb,{type:"array",bookType:"xlsx"})))}
+
+/* ───────── 사업장 ───────── */
+function siteOptions(){const s=$("#siteSel");if(!s)return;const ss=sites(),sig=ss.join("|")+"#"+UI.site;if(s.dataset.sig===sig)return;s.dataset.sig=sig;
+  s.innerHTML=`<option value="">전체</option>`+ss.map(n=>`<option ${n===UI.site?"selected":""}>${esc(n)}</option>`).join("")}
+function siteBox(){const ss=sites();
+  return `<div class="row" style="margin-bottom:10px">${ss.map(n=>`<span class="chip" style="font-size:14px;padding:4px 6px 4px 12px">${esc(n)} <button class="btn small" style="min-height:0;padding:0 8px;border:0" data-act="rmSite" data-v="${esc(n)}" aria-label="${esc(n)} 빼기">×</button></span>`).join("")}</div>
+  <div class="row"><input id="newSite" placeholder="사업장 이름" style="max-width:220px"><button class="btn" data-act="addSite">추가</button></div>`}
+
+
+/* ───────── 아이디·비밀번호 로그인 ───────── */
+const SESS_KEY=LKEY+"-session",LASTID_KEY=LKEY+"-lastid";
+async function sha(s){try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}catch{let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))|0;return "x"+(h>>>0).toString(16)}}
+async function pbkdf2(salt,pw){try{const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveBits"]);const b=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(salt),iterations:100000,hash:"SHA-256"},k,256);return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}catch{return sha(salt+":"+pw)}}
+const pwCheck=async(w,pw)=>w&&w.pinHash&&(w.algo==="pbkdf2"?await pbkdf2(w.salt,pw):await sha(w.salt+":"+pw))===w.pinHash;
+async function pwFields(pw){const salt=newSalt();return {salt,pinHash:await pbkdf2(salt,pw),algo:"pbkdf2"}}
+const newSalt=()=>[...crypto.getRandomValues(new Uint8Array(8))].map(x=>x.toString(16).padStart(2,"0")).join("");
+const ID_RE=/^[A-Za-z0-9._-]{3,20}$/;
+const normId=s=>String(s||"").trim().toLowerCase();
+const pwOk=p=>typeof p==="string"&&p.length>=4;
+const staffList=()=>Object.values(S.staff).filter(w=>!w.deleted).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ko"));
+const pinStaff=()=>staffList().filter(w=>w.pinHash||w.hasPin);
+const managers=()=>pinStaff().filter(w=>w.role==="manager");
+const staffById=lid=>staffList().find(w=>normId(w.loginId)===normId(lid));
+const loginOn=()=>SERVER?true:(!!S.cfg.loginRequired&&pinStaff().length>0);
+function getSess(){const s=ls.get(SESS_KEY);if(!s||!s.id||(SERVER&&!s.token))return null;const w=S.staff[s.id];if(!w||w.deleted||(!w.pinHash&&!w.hasPin))return null;return {id:w.id,name:w.name,role:w.role||"worker",loginId:w.loginId||""}}
+let lastAct=Date.now(),lastGate=null;
+function startSess(w){ls.set(SESS_KEY,{id:w.id,at:Date.now()});lastAct=Date.now();UI.login={step:"login"};logEvent("로그인",w.role==="manager"?"관리자":"",w.id);lastGate=false;render();toast(`${w.name} 님, 반갑습니다`)}
+async function srvPost(url,body){const x=ls.get(SESS_KEY)||{};const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",...(x.token?{"Authorization":"Bearer "+x.token}:{})},body:JSON.stringify(body||{})});let j={};try{j=await r.json()}catch{}return {...j,ok:r.ok,status:r.status}}
+function logout(reason){if(SERVER){const x=ls.get(SESS_KEY)||{};try{fetch("/api/logout",{method:"POST",headers:{"Authorization":"Bearer "+(x.token||"")},keepalive:true})}catch{}ls.set(SESS_KEY,null);if(reason)ls.set(LKEY+"-msg",reason);location.reload();return}const s=getSess();if(s)logEvent("로그아웃",reason||"",s.id);ls.set(SESS_KEY,null);UI.login={step:"login"};lastGate=null;render();if(reason)toast(reason)}
+["pointerdown","keydown"].forEach(ev=>addEventListener(ev,()=>{lastAct=Date.now()},{passive:true,capture:true}));
+setInterval(()=>{if(!loginOn()||!getSess())return;const m=num(S.cfg.autoLogout)||0;if(m&&Date.now()-lastAct>m*60000)logout(`${m}분 동안 쓰지 않아 자동으로 로그아웃했습니다`)},30000);
+const gated=()=>loginOn()&&!getSess();
+const pub=()=>window.__YIELD_PUBLIC__||null;
+const canRegister=()=>!SERVER||!pub()||pub().allowRegister!==false;
+const fld=(id,label,type,extra)=>`<label class="f"><b>${label}</b><input id="${id}" ${type==="pw"?'type="password"':'autocapitalize="none" autocorrect="off" spellcheck="false"'} ${extra||""}></label>`;
+function loginScreen(){const L=UI.login||(UI.login={step:"login"});L.loading=false;
+  const card=(inner,id)=>`<div class="loginwrap"><form class="card login" id="${id}" autocomplete="on" novalidate><div class="brandmark">코리아식품 수율 일지</div>${inner}</form></div>`;
+  const err=L.err?`<p class="loginerr" role="alert">${esc(L.err)}</p>`:"";
+  if(SERVER&&!pub()){L.loading=true;return `<div class="loginwrap"><div class="card login"><p class="lead">서버에 연결하는 중…</p></div></div>`}
+  if(SERVER&&pub().setupNeeded)return card(`<h2>처음 설정</h2><p class="lead">관리자 계정을 먼저 만듭니다. 이 아이디로 관리자 화면(기준값·보고서·백업)에 들어갑니다.</p>
+    <div class="fields lf">${fld("su_id","관리자 아이디","text",`autocomplete="username" placeholder="영문·숫자 3~20자" value="${esc(L.loginId||"")}"`)}${fld("su_name","이름 (기록에 남는 이름)","text",`value="${esc(L.name||"")}"`)}
+    ${fld("su_pw","비밀번호","pw",'autocomplete="new-password" placeholder="4자 이상"')}${fld("su_pw2","비밀번호 확인","pw",'autocomplete="new-password"')}</div>
+    ${err}<button class="btn primary loginbtn" type="submit">관리자 만들고 시작</button>`,"setupForm");
+  if(L.step==="reg")return card(`<h2>회원가입</h2><p class="lead">아이디와 비밀번호를 정하세요. 이름은 작업 기록에 입력자로 남습니다.</p>
+    <div class="fields lf">${fld("rg_id","아이디","text",`autocomplete="username" placeholder="영문·숫자 3~20자" value="${esc(L.loginId||"")}"`)}${fld("rg_name","이름","text",`value="${esc(L.name||"")}"`)}
+    ${fld("rg_pw","비밀번호","pw",'autocomplete="new-password" placeholder="4자 이상"')}${fld("rg_pw2","비밀번호 확인","pw",'autocomplete="new-password"')}</div>
+    ${err}<button class="btn primary loginbtn" type="submit">가입하고 시작</button><button type="button" class="linkbtn" data-act="loginBack" style="justify-self:center">로그인 화면으로</button>`,"regForm");
+  const locked=L.lockUntil&&Date.now()<L.lockUntil,last=ls.get(LASTID_KEY)||"";
+  return card(`<h2>로그인</h2><p class="lead">아이디와 비밀번호를 입력하세요.${UI.site?` · ${esc(UI.site)}`:""}</p>
+    <div class="fields lf">${fld("lg_id","아이디","text",`autocomplete="username" value="${esc(L.loginId??last)}"`)}${fld("lg_pw","비밀번호","pw",'autocomplete="current-password"')}</div>
+    <label class="row keep"><input type="checkbox" id="lg_keep" ${L.keep===false?"":"checked"}> 아이디 기억하기</label>
+    ${err}<button class="btn primary loginbtn" type="submit" ${locked?"disabled":""}>로그인</button>
+    <div class="row" style="justify-content:space-between">${canRegister()?`<button type="button" class="linkbtn" data-act="regShow">회원가입</button>`:"<span></span>"}<span class="formula">비밀번호를 잊으면 관리자에게 문의하세요</span></div>
+    ${num(S.cfg.autoLogout)?`<p class="formula" style="margin:0;text-align:center">${num(S.cfg.autoLogout)}분 동안 쓰지 않으면 자동으로 로그아웃됩니다</p>`:""}`,"loginForm")}
+function renderLogin(){live=[];$("#view").innerHTML=loginScreen();
+  const bind=(id,fn,first)=>{const f=$("#"+id);if(!f)return;f.addEventListener("submit",ev=>{ev.preventDefault();fn()});const i=$(first);if(i)(i.value?($("#"+id+" input[type=password]")||i):i).focus()};
+  bind("loginForm",loginSubmit,"#lg_id");bind("regForm",regSubmit,"#rg_id");bind("setupForm",setupSubmit,"#su_id")}
+async function loginSubmit(){const L=UI.login,lid=normId($("#lg_id").value),pw=$("#lg_pw").value,keep=$("#lg_keep").checked;L.loginId=$("#lg_id").value;L.keep=keep;
+  const fail=m=>{L.err=m;renderLogin()};if(!lid||!pw)return fail("아이디와 비밀번호를 입력하세요");
+  if(L.lockUntil&&Date.now()<L.lockUntil)return;
+  ls.set(LASTID_KEY,keep?lid:null);
+  if(SERVER){let r;try{r=await srvPost("/api/login",{loginId:lid,password:pw})}catch{r={error:"서버에 연결할 수 없습니다. 서버 PC가 켜져 있는지 확인하세요."}}
+    if(r.ok){ls.set(SESS_KEY,{id:r.id,token:r.token});location.reload();return}
+    if(r.lockSec){L.lockUntil=Date.now()+r.lockSec*1000;setTimeout(()=>{if(UI.login===L){L.err="";L.lockUntil=0;if(gated())renderLogin()}},r.lockSec*1000)}
+    return fail(r.error||"로그인하지 못했습니다")}
+  const w=staffById(lid),t=(L.tries=L.tries||{});
+  if(await pwCheck(w,pw)){delete t[lid];startSess(w);return}
+  t[lid]=(t[lid]||0)+1;
+  if(t[lid]>=5){t[lid]=0;L.lockUntil=Date.now()+30000;setTimeout(()=>{if(UI.login===L){L.err="";L.lockUntil=0;if(gated())renderLogin()}},30000);return fail("5번 틀렸습니다. 30초 뒤에 다시 시도하세요.")}
+  fail(`아이디 또는 비밀번호가 맞지 않습니다 (${t[lid]}/5)`)}
+function readAcct(p){return {lid:normId($("#"+p+"_id").value),name:normName($("#"+p+"_name").value),p1:$("#"+p+"_pw").value,p2:$("#"+p+"_pw2").value}}
+function acctError(a){if(!ID_RE.test(a.lid))return "아이디는 영문·숫자 3~20자입니다 (. _ - 사용 가능)";if(!a.name)return "이름을 입력하세요";if(!pwOk(a.p1))return "비밀번호는 4자 이상입니다";if(a.p1!==a.p2)return "비밀번호 확인이 다릅니다";return ""}
+async function regSubmit(){const L=UI.login,a=readAcct("rg");L.loginId=$("#rg_id").value;L.name=a.name;const fail=m=>{L.err=m;renderLogin()};
+  const e=acctError(a);if(e)return fail(e);
+  if(SERVER){let r;try{r=await srvPost("/api/register",{loginId:a.lid,name:a.name,password:a.p1})}catch{r={error:"서버에 연결할 수 없습니다"}}if(r.ok){ls.set(SESS_KEY,{id:r.id,token:r.token});location.reload();return}return fail(r.error||"가입하지 못했습니다")}
+  if(staffById(a.lid))return fail("이미 쓰고 있는 아이디입니다");
+  const key=a.name.replace(/\s/g,""),ex=staffList().find(w=>!w.pinHash&&!w.loginId&&normName(w.name).replace(/\s/g,"")===key);
+  const id=ex?ex.id:uid("w"),rec={...(ex?clone(ex):{createdAt:new Date().toISOString(),role:"worker",addedBy:"self"}),loginId:a.lid,name:ex?ex.name:a.name,...await pwFields(a.p1)};delete rec.id;
+  put("staff/"+id,rec,true);S.staff[id]={...rec,id};ls.set(SESS_KEY,{id,at:Date.now()});ls.set(LASTID_KEY,a.lid);logEvent("회원가입",`${rec.name} (${a.lid})`,id);startSess({...rec,id})}
+async function setupSubmit(){const L=UI.login,a=readAcct("su");L.loginId=$("#su_id").value;L.name=a.name;const fail=m=>{L.err=m;renderLogin()};
+  const e=acctError(a);if(e)return fail(e);
+  let r;try{r=await srvPost("/api/setup",{loginId:a.lid,name:a.name,password:a.p1})}catch{r={error:"서버에 연결할 수 없습니다"}}if(r.ok){ls.set(SESS_KEY,{id:r.id,token:r.token});ls.set(LASTID_KEY,a.lid);location.reload();return}fail(r.error||"설정하지 못했습니다")}
+async function adminAddStaff(lid,name,pw,role){lid=normId(lid);name=normName(name);
+  if(!ID_RE.test(lid)){toast("아이디는 영문·숫자 3~20자입니다");return false}if(!name){toast("이름을 입력하세요");return false}if(!pwOk(pw)){toast("비밀번호는 4자 이상입니다");return false}
+  if(SERVER){let r;try{r=await srvPost("/api/staff",{loginId:lid,name,password:pw,role:role||"worker"})}catch{r={error:"서버에 연결할 수 없습니다"}}if(!r.ok){toast(r.error||"추가하지 못했습니다");return false}toast(`${name} (${lid}) 계정을 만들었습니다`);return true}
+  if(staffById(lid)){toast("이미 쓰고 있는 아이디입니다");return false}
+  const rec={loginId:lid,name,role:role||"worker",addedBy:who()||"",createdAt:new Date().toISOString(),...await pwFields(pw)};
+  put("staff/"+uid("w"),rec);logEvent("계정 추가",`${name} (${lid}, ${role==="manager"?"관리자":"현장"})`);toast(`${name} (${lid}) 계정을 만들었습니다`);return true}
+async function adminSetPw(id){const i=$("#pw_"+id),pw=i?i.value:"",li=$("#lid_"+id),w0=S.staff[id];const lid=li?normId(li.value):normId(w0&&w0.loginId);
+  if(!ID_RE.test(lid)){toast("아이디는 영문·숫자 3~20자입니다");return}if(!pwOk(pw)){toast("비밀번호는 4자 이상입니다");return}
+  if(SERVER){let r;try{r=await srvPost("/api/staff/"+id+"/password",{password:pw,loginId:lid})}catch{r={error:"서버에 연결할 수 없습니다"}}toast(r.ok?"비밀번호를 바꿨습니다":(r.error||"바꾸지 못했습니다"));if(r.ok&&i)i.value="";return}
+  const other=staffById(lid);if(other&&other.id!==id){toast("이미 쓰고 있는 아이디입니다");return}
+  const w=clone(w0);Object.assign(w,{loginId:lid},await pwFields(pw));delete w.id;put("staff/"+id,w);logEvent("비밀번호 재설정",`${w.name} (${lid})`,id);toast(`${w.name} 님의 비밀번호를 바꿨습니다`)}
+function lastManagerGuard(id,nextRole){if(!loginOn())return false;const left=managers().filter(w=>w.id!==id||nextRole==="manager");if(!left.length){toast("로그인을 쓰는 동안 관리자는 한 명 이상 있어야 합니다");return true}return false}
+function userBox(){const b=$("#userBox"),wl=$("#whoSel")&&$("#whoSel").closest("label");if(!b)return;const on=loginOn(),s=on&&getSess();if(wl)wl.hidden=on;
+  const sig=on+"|"+(s?s.id+s.role+s.name:"");if(b.dataset.sig===sig)return;b.dataset.sig=sig;
+  b.innerHTML=s?`<span class="userchip" title="${esc(s.loginId)}">${esc(s.name)}${s.role==="manager"?" · 관리자":""}</span><button type="button" class="btn small" data-act="logout">로그아웃</button>`:""}
+
+/* ───────── 이벤트 ───────── */
+function rerenderForm(){if(UI.tab==="wash"){$("#washForm").innerHTML=washForm();bindWash()}else if(UI.tab==="heat"){$("#heatForm").innerHTML=heatForm();bindHeat()}else if(UI.tab==="pack"){$("#packForm").innerHTML=packForm();bindPack()}}
+function scrollToForm(id){if(innerWidth<860){const el=$(id);el&&el.scrollIntoView({behavior:"smooth",block:"start"})}}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b||b.tagName==="SELECT"||b.type==="checkbox"||b.tagName==="INPUT")return;
+  const a=b.dataset.act,id=b.dataset.id,v=b.dataset.v;
+  if(a==="goto")setTab(v);
+  else if(a==="period"){UI.period=v;refresh()}
+  else if(a==="loadSample"){const s=sample();Object.entries(s.products).forEach(([k,p])=>put("products/"+k,p,true));Object.entries(s.lots).forEach(([k,l])=>put("lots/"+k,l,true));Object.entries(s.packs).forEach(([k,p])=>put("packs/"+k,p,true));refresh();toast("10/17~20 일지 예시를 채웠습니다")}
+  else if(a==="editLot"){UI.editLot=id;UI.confirm=null;render()}
+  else if(a==="cancelEdit"){UI.editLot=null;render()}
+  else if(a==="askDel"){UI.confirm=id;refresh();if(id==="ungroup")rerenderForm()}
+  else if(a==="noConfirm"){const was=UI.confirm;UI.confirm=null;refresh();if(was==="ungroup")rerenderForm()}
+  else if(a==="del"){UI.confirm=null;softDelete(b.dataset.k,id);if(b.dataset.k==="lot"&&UI.editLot===id)UI.editLot=null}
+  else if(a==="ungroup"){UI.confirm=null;const lots=UI.washSel.map(i=>S.lots[i]).filter(Boolean);
+    if(lots.some(l=>packsOf(l.id).length)){toast("포장 기록이 있는 묶음은 풀 수 없습니다. 관리자에게 포장 기록 삭제를 요청하세요");rerenderForm();return}
+    lots.forEach(l0=>{const l=clone(l0);delete l.wash;delete l.heat;put("lots/"+l.id,l,true)});logEvent("묶음 풀기",`B/L ${lots.map(l=>l.bl).join("+")} 세척 기록 삭제`,lots[0].id);
+    UI.washSel=[];UI.washMulti=false;refresh();rerenderForm();toast("묶음을 풀었습니다. 로트별로 다시 세척 중량을 입력하세요")}
+  else if(a==="pick"){const k=b.dataset.k;
+    if(k==="wash"){const l=S.lots[v];const ids=unitIds(l);
+      if(UI.washMulti){const on=ids.every(i=>UI.washSel.includes(i));UI.washSel=on?UI.washSel.filter(i=>!ids.includes(i)):[...new Set([...UI.washSel,...ids])]}
+      else{UI.washSel=ids;if(ids.length>1)UI.washMulti=true}UI.confirm=null;refresh();rerenderForm();scrollToForm("#washForm")}
+    else if(k==="heat"){UI.heatUnit=v;refresh();rerenderForm();scrollToForm("#heatForm")}
+    else{UI.packUnit=v;UI.editPack=null;UI.confirm=null;refresh();rerenderForm();scrollToForm("#packSum")}}
+  else if(a==="packMode"){UI.packMode=v;UI.editPack=null;render()}
+  else if(a==="editPack"){const p=S.packs[id];if(!p)return;UI.editPack=id;
+    if(packIds(p).length){UI.packMode="lot";const l=S.lots[packIds(p)[0]];UI.packUnit=l?unitIds(l).slice().sort().join("+"):UI.packUnit}else UI.packMode="free";
+    render();const f=$("#packForm");f&&f.scrollIntoView({behavior:"smooth",block:"start"})}
+  else if(a==="addOpt")addOption(id,b.dataset.k);
+  else if(a==="cancelOpt"){const bx=$("#"+id+"_add");if(bx)bx.hidden=true}
+  else if(a==="cancelPack"){UI.editPack=null;rerenderForm()}
+  else if(a==="docType"){UI.docType=v;$$('[data-act="docType"]').forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===v));refresh()}
+  else if(a==="dlDoc")dlDoc(v);
+  else if(a==="saveProd"){const tr=b.closest("tr"),o={};$$("input",tr).forEach(i=>{const k=i.dataset.k,t=PF.find(f=>f[0]===k)[2];o[k]=t==="n"?num(i.value):t==="c"?i.checked:i.value.trim()});
+    if(!o.name){toast("제품명을 입력하세요");return}if(!o.sizeKg){toast("규격(kg)을 숫자로 입력하세요");return}
+    const pid=id==="new"?uid("p_"):id;put("products/"+pid,o);logEvent(id==="new"?"제품 추가":"제품 기준 변경",`${o.name} · 세척 ${o.stdWash??"-"}% · 가열 ${o.needsHeat?(o.stdHeat??"미정")+"%":"없음"} · 포장 ${o.stdPack??"-"}%`);toast(id==="new"?"제품을 추가했습니다":"저장했습니다")}
+  else if(a==="addWorker"){const i=$("#newWorker"),pn=$("#newPw"),lid=$("#newLid"),rl=$("#newRole");if(pn&&lid){adminAddStaff(lid.value,i.value,pn.value,rl.value).then(ok=>{if(ok){i.value="";pn.value="";lid.value="";lid.focus()}})}else if(addWorkerName(i.value)){i.value="";i.focus()}}
+  else if(a==="logout")logout();
+  else if(a==="printDoc"){const pp=$("#paper");if(!pp){toast("인쇄할 일지가 없습니다");return}document.body.classList.add("printing");setTimeout(()=>{window.print();document.body.classList.remove("printing")},50)}
+  else if(a==="loginBack"){UI.login={step:"login",tries:UI.login.tries};renderLogin()}
+  else if(a==="regShow"){UI.login={step:"reg",tries:UI.login.tries};renderLogin()}
+  else if(a==="setPw")adminSetPw(id);
+  else if(a==="rmStaff"){UI.confirm=null;if(lastManagerGuard(id,"worker")){refresh();return}const w=clone(S.staff[id]);w.deleted=true;w.deletedAt=new Date().toISOString();w.deletedBy=who();delete w.id;put("staff/"+id,w);logEvent("직원 빼기",w.name,id)}
+  else if(a==="saveAutoLogout"){const m=num($("#autoLogout").value);const c={...S.cfg,autoLogout:m==null?30:Math.max(0,m)};delete c.id;put("config/main",c);logEvent("설정 변경",`자동 로그아웃 ${c.autoLogout}분`);toast(c.autoLogout?`${c.autoLogout}분 뒤 자동 로그아웃`:"자동 로그아웃을 껐습니다")}
+  else if(a==="rmWorker"){if(!UI.isAdmin)return;removeWorkerName(v)}
+  else if(a==="addWho"){const i=$("#whoNew"),n=addWorkerName(i.value);if(n){ls.set(LKEY+"-me",n);$("#whoAdd").hidden=true;i.value="";const s=$("#whoSel");s.dataset.sig="";whoOptions()}}
+  else if(a==="cancelWho"){$("#whoAdd").hidden=true}
+  else if(a==="restore")restore(b.dataset.k,id);
+  else if(a==="exportJson")save(`수율일지_백업_${todayStr()}.json`,JSON.stringify({exportedAt:new Date().toISOString(),version:3,products:S.products,lots:S.lots,packs:S.packs,raws:S.raws,staff:S.staff,cfg:S.cfg},null,1)).then(ok=>{if(ok){const c={...S.cfg,lastBackup:{at:new Date().toISOString(),by:who()}};delete c.id;put("config/main",c);logEvent("백업","전체 백업 파일 내려받음")}});
+  else if(a==="relMode"){UI.relMode=v;UI.editLot=null;UI.editRaw=null;render()}
+  else if(a==="editRaw"){UI.editRaw=id;UI.relMode="raw";render()}
+  else if(a==="cancelRaw"){UI.editRaw=null;$("#rawFormBox").innerHTML=rawForm();bindRaw()}
+  else if(a==="goRaw"){UI.relMode="raw";setTab("release")}
+  else if(a==="tUnit"){UI.tUnit=v;refresh()}
+  else if(a==="chkRun"){const t=UI.chkText||"";if(!t.trim()){toast("엑셀에서 복사한 내용을 붙여넣으세요");return}chkParse(chkTextRows(t),"붙여넣은 내용")}
+  else if(a==="chkTemplate")chkTemplate();
+  else if(a==="addSite"){const i=$("#newSite"),n=i.value.trim();if(!n)return;const c={...S.cfg,sites:[...new Set([...sites(),n])]};delete c.id;put("config/main",c);logEvent("사업장 추가",n);i.value=""}
+  else if(a==="rmSite"){if(sites().length<=1){toast("사업장은 하나 이상 있어야 합니다");return}if(Object.values(S.lots).some(l=>!l.deleted&&siteOf(l)===v)){toast("이 사업장 기록이 있어 뺄 수 없습니다");return}const c={...S.cfg,sites:sites().filter(x=>x!==v)};delete c.id;put("config/main",c);logEvent("사업장 빼기",v)}
+  else if(a==="exportXlsx")exportXlsx();
+  else if(a==="aView"){UI.aView=v;refresh()}
+  else if(a==="aPeriod"){UI.aPeriod=v;refresh()}
+  else if(a==="aGoFlow"){UI.flowSel=v;UI.aView="flow";if(UI.tab!=="admin")setTab("admin");else{refresh();window.scrollTo({top:0,behavior:"smooth"})}}
+  else if(a==="flowLot"){UI.flowSel="l:"+v;refresh();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="goPrice"){const c=$("#priceCard");if(c){c.scrollIntoView({behavior:"smooth"});const i=$("[data-price]",c);i&&i.focus()}}
+  else if(a==="savePrices")savePrices();
+  else if(a==="rType"){UI.rType=v;UI.rKey="";refresh()}
+  else if(a==="dlReport")dlReport();
+  else if(a==="dlLog")dlLog();
+});
+document.addEventListener("focusin",e=>{const t=e.target;if(t.dataset&&t.dataset.addsel&&t.value!=="__add")t.dataset.prev=t.value});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.addsel){if(t.value==="__add"){const d=[...t.options].find(o=>o.defaultSelected&&o.value!=="__add");t.value=t.dataset.prev??(d?d.value:"");if(t.value==="__add"||t.selectedIndex<0)t.selectedIndex=0;const bx=$("#"+t.id+"_add");if(bx){bx.hidden=false;const i=$("#"+t.id+"_new");i&&i.focus()}e.stopImmediatePropagation();return}t.dataset.prev=t.value}if(t.id==="whoSel"&&t.value==="__add"){t.value=who();if(t.value==="__add")t.selectedIndex=0;const bx=$("#whoAdd");bx.hidden=false;$("#whoNew").focus();return}
+  if(t.id==="whoSel"){ls.set(LKEY+"-me",t.value);t.dataset.sig="";whoOptions();toast(t.value?`입력자: ${t.value}`:"입력자를 비웠습니다");return}
+  if(t.id==="logQ"){UI.logQ=t.value;refresh();return}
+  if(t.dataset&&t.dataset.act==="staffRole"){const id=t.dataset.id;if(lastManagerGuard(id,t.value)){t.value="manager";return}const w=clone(S.staff[id]);w.role=t.value;delete w.id;put("staff/"+id,w);logEvent("역할 변경",`${w.name} → ${t.value==="manager"?"관리자":"현장"}`,id);return}
+  if(t.dataset&&t.dataset.act==="loginToggle"){if(t.checked&&!managers().length){t.checked=false;toast("먼저 ‘관리자’ 역할의 계정(아이디·비밀번호)을 한 명 이상 만드세요");return}
+    const c={...S.cfg,loginRequired:t.checked};delete c.id;put("config/main",c);logEvent("설정 변경",t.checked?"로그인 켬":"로그인 끔");toast(t.checked?"로그인을 켰습니다. 관리자 아이디로 로그인하세요":"로그인을 껐습니다");return}
+  if(t.id==="siteSel"){UI.site=t.value;ls.set(LKEY+"-site",t.value);t.dataset.sig="";UI.washSel=[];UI.heatUnit=null;UI.packUnit=null;UI.docUnit=null;render();toast(t.value?`${t.value} 기록만 보여 줍니다`:"전체 사업장을 보여 줍니다");return}
+  if(t.id==="chkFile"){const f=t.files[0];if(f)chkFile(f);t.value="";return}
+  if(t.dataset&&t.dataset.act==="chkAll"){UI.chkAll=t.checked;refresh();return}
+  const a=t.dataset&&t.dataset.act;if(!a)return;
+  if(a==="prodFilter"){UI.prodFilter=t.value;refresh()}
+  else if(a==="showDone"){UI.showDone[t.dataset.k]=t.checked;refresh()}
+  else if(a==="washMulti"){UI.washMulti=t.checked;if(!t.checked&&UI.washSel.length>1){const l=S.lots[UI.washSel[0]];UI.washSel=l?unitIds(l):[];if(UI.washSel.length>1)UI.washMulti=true}refresh();rerenderForm()}
+  else if(a==="packDone"){const ids=keyIds(UI.packUnit);ids.forEach(i=>{const l=clone(S.lots[i]);l.packDone=t.checked;put("lots/"+i,l,true)});refresh();
+    logEvent(t.checked?"포장 완료":"포장 완료 취소",`B/L ${ids.map(i=>S.lots[i]?.bl).join("+")}`,ids[0]);toast(t.checked?"포장 완료로 표시했습니다":"포장 중으로 되돌렸습니다")}
+  else if(a==="docUnit"){UI.docUnit=t.value;refresh()}
+  else if(a==="flowSel"){UI.flowSel=t.value;refresh()}
+  else if(a==="rKey"){UI.rKey=t.value;refresh()}
+  else if(a==="logDate"){UI.logDate=t.value;refresh()}
+});
+document.addEventListener("input",e=>{if(e.target.id==="chkText")UI.chkText=e.target.value});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="whoNew"){e.preventDefault();$('[data-act="addWho"]').click();return}if(e.key==="Enter"&&e.target.id==="newWorker"){e.preventDefault();$('[data-act="addWorker"]').click();return}if(e.key==="Enter"&&e.target.matches&&e.target.matches("tr[data-act]"))e.target.click()});
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(b)setTab(b.dataset.tab)});
+
+/* ───────── 시작 ───────── */
+{const m0=ls.get(LKEY+"-msg");if(m0){ls.set(LKEY+"-msg",null);setTimeout(()=>toast(m0),900)}}
+$("#today").textContent=todayStr()+" ("+dow(todayStr())+")";
+const h0=(location.hash||"").slice(1);setTab(TABS.includes(h0)?h0:(ls.get(LKEY+"-tab")||"home"),false);
+function goLocal(){mode="local";const j=ls.get(LKEY)||{};S.lots=j.lots||{};S.packs=j.packs||{};S.raws=j.raws||{};S.staff=j.staff||{};S.products=j.products||{};S.cfg={...DEFAULT_CFG,...(j.cfg||{})};S.logs=j.logs||{};S.prices=j.prices||ls.get(LKEY+"-prices")||{};
+  Object.values(S.lots).forEach(l=>{if(Array.isArray(l.packs)){l.packs.forEach(pk=>{const pid=pk.id||uid("pk");S.packs[pid]={...pk,id:pid,lotIds:[l.id],lotId:l.id}});delete l.packs}});
+  if(!Object.keys(S.products).length){const s=sample();Object.entries(s.products).forEach(([k,p])=>S.products[k]={...p,id:k})}
+  persistLocal();logReady=true;UI.isAdmin=true;applyRole();if(UI.pendingTab){const t=UI.pendingTab;UI.pendingTab=null;setTab(t)}else render()}
+(async()=>{
+  let api=null;
+  try{api=window.claude&&window.claude.use?await Promise.race([window.claude.use("db"),new Promise(r=>setTimeout(()=>r(null),11000))]):null}catch{api=null}
+  if(!api){goLocal();return}
+  db=api;mode="shared";syncChip();
+  const fail=e=>{toast("공유 저장소 연결이 끊겼습니다 ("+(e&&e.code||"오류")+"). 새로고침해 주세요.")};
+  const coll=c=>db.collection(c).onSnapshot(s=>{const o={};s.docs.forEach(d=>o[d.id]={...clone(d.data()),id:d.id});S[c]=o;(S._ld||(S._ld={}))[c]=1;overlay(c);refresh()},fail);
+  coll("lots");coll("packs");coll("products");coll("raws");coll("staff");
+  db.doc("config/main").onSnapshot(s=>{S.cfg=s.exists?{...DEFAULT_CFG,...clone(s.data())}:{...DEFAULT_CFG};overlay("config");refresh()},fail);
+  const myLog=todayStr()+"_"+DEV;
+  db.doc("logs/"+myLog).onSnapshot(s=>{if(s.exists)S.logs[myLog]={...clone(s.data()),id:myLog};overlay("logs");setLogReady()},()=>setLogReady());
+  setTimeout(setLogReady,8000);
+  let u=null;try{u=await window.claude.use("user")}catch{}
+  try{UI.isAdmin=u?!!(await u.canEdit()):false}catch{UI.isAdmin=false}
+  applyRole();
+  if(UI.isAdmin){db.doc("admin/prices").onSnapshot(s=>{S.prices=s.exists?clone(s.data()):{};overlay("admin");refresh()},()=>{});
+    db.collection("logs").where("date",">=",addDays(todayStr(),-60)).onSnapshot(s=>{const o={};s.docs.forEach(d=>o[d.id]={...clone(d.data()),id:d.id});S.logs={...S.logs,...o};overlay("logs");refresh()},()=>{});
+    if(UI.pendingTab){const t=UI.pendingTab;UI.pendingTab=null;setTab(t)}}
+  flush();
+})();
+})();
+</script>
+
+</body></html>

@@ -1,0 +1,43 @@
+{
+ "config/main": {
+  "tol": 10,
+  "manager": "",
+  "formRev": "2023-02-06",
+  "workers": [],
+  "sites": [
+   "코리아식품",
+   "하비랑"
+  ],
+  "lowStock": 800,
+  "loginRequired": true,
+  "autoLogout": 30
+ },
+ "products/p_kimsabu": {
+  "name": "김사부의 돼지막창 - 2kg",
+  "workName": "훈제 머리꼬리",
+  "sizeKg": 2,
+  "stdWash": 105,
+  "stdPack": 80,
+  "needsHeat": false,
+  "stdHeat": null,
+  "expiryDays": 363,
+  "origin": "캐나다산",
+  "sauce": "훈초벌 양념소스",
+  "logTitle": "생산일지",
+  "logSub": "(통 초벌/훈제막창)"
+ },
+ "products/p_hoesaek": {
+  "name": "회색 숙성돼지막창 - 2kg",
+  "workName": "생막창",
+  "sizeKg": 2,
+  "stdWash": 105,
+  "stdPack": 104,
+  "needsHeat": false,
+  "stdHeat": null,
+  "expiryDays": 455,
+  "origin": "외국산",
+  "sauce": "생막창 양념소스",
+  "logTitle": "생산일지(생막창)",
+  "logSub": "(숙성돼지막창-회색/갈색/제일/안지랑/신풍/소덤소덤/성주/마시볼/미진)"
+ }
+}

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>수율 일지 사내 서버 설치 안내</title>
+<style>
+  :root{--ink:#1b2026;--muted:#5b6571;--line:#d3d9e0;--pen:#2340a8;--soft:#f3f5f8;--warn:#9a5c00;--warn-soft:#fbf0dc}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);font:16px/1.7 "Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+  main{max-width:780px;margin:0 auto;padding:32px 20px 64px}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.01em}
+  .lead{color:var(--muted);margin:0 0 24px}
+  h2{font-size:19px;margin:36px 0 10px;padding-top:16px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:baseline}
+  h2 .n{font-family:Consolas,monospace;color:var(--pen);font-size:15px;border:2px solid var(--pen);border-radius:50%;width:28px;height:28px;display:inline-grid;place-items:center;flex:0 0 auto}
+  ol,ul{padding-left:22px}
+  li{margin:4px 0}
+  code,kbd{font-family:Consolas,monospace;background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:14px}
+  .box{background:var(--soft);border-radius:8px;padding:12px 16px;margin:12px 0}
+  .warn{background:var(--warn-soft);color:var(--warn)}
+  table{border-collapse:collapse;width:100%;font-size:15px;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--soft)}
+  @media print{main{padding:0}h2{break-after:avoid}}
+</style>
+</head>
+<body>
+<main>
+<h1>코리아식품 수율 일지 · 사내 서버 설치 안내</h1>
+<p class="lead">회사 PC 한 대에 설치하면, 같은 와이파이에 연결된 태블릿·휴대폰·PC가 인터넷 주소처럼 접속해서 함께 씁니다. 사이트에 들어가면 로그인 화면이 나오고, 직원마다 아이디와 비밀번호로 로그인합니다. 다른 사이트 가입은 필요 없습니다.</p>
+
+<div class="box"><b>준비물</b>
+<ul>
+<li>근무 시간에 항상 켜 두는 <b>윈도우 PC 1대</b> (사무실 PC면 충분합니다)</li>
+<li>태블릿과 그 PC가 <b>같은 공유기(와이파이)</b>에 연결되어 있을 것</li>
+<li>이 폴더 (<code>KoreaFood-Yield-Server</code>)</li>
+</ul></div>
+
+<h2><span class="n">1</span>파이썬 설치 (처음 한 번)</h2>
+<ol>
+<li><b>python.org/downloads</b> 에 들어가 노란색 <b>Download Python</b> 버튼을 누릅니다.</li>
+<li>받은 파일을 실행하고, 첫 화면 아래의 <b>“Add python.exe to PATH”</b> 에 꼭 체크한 뒤 <b>Install Now</b> 를 누릅니다.</li>
+<li>설치가 끝나면 닫습니다. 다른 프로그램은 설치하지 않아도 됩니다.</li>
+</ol>
+
+<h2><span class="n">2</span>폴더 놓기</h2>
+<p>받은 압축 파일을 풀어 <code>C:\KoreaFood-Yield-Server</code> 처럼 찾기 쉬운 곳에 둡니다. 바탕화면보다는 C 드라이브 바로 아래를 권합니다. 이 폴더 안에 데이터가 쌓이므로 지우거나 옮기지 마세요.</p>
+
+<h2><span class="n">3</span>서버 켜기</h2>
+<ol>
+<li>폴더 안의 <b>server.py</b> 를 두 번 누릅니다. (start.bat 이 들어 있으면 그걸 눌러도 됩니다.)<br><small>“이 파일을 열 앱”을 물으면 <b>Python</b> 을 고르세요.</small></li>
+<li>검은 창이 뜨고 “사내 서버가 켜졌습니다”와 함께 주소가 나옵니다. 예: <code>http://192.168.0.15:8080</code></li>
+<li>처음에 <b>Windows 보안 경고(방화벽)</b> 창이 뜨면 <b>“개인 네트워크”</b> 에 체크하고 <b>액세스 허용</b>을 누릅니다. 이걸 허용해야 태블릿에서 접속됩니다.</li>
+</ol>
+<div class="box warn">검은 창을 닫으면 서버가 꺼집니다. 최소화(—)해서 두세요. 매번 켜기 번거로우면 8단계로 자동 실행을 걸어 두세요.</div>
+
+<h2><span class="n">4</span>처음 설정 (관리자 계정 만들기)</h2>
+<ol>
+<li>그 PC에서 크롬이나 엣지를 열고 주소창에 <code>http://localhost:8080</code> 을 입력합니다.</li>
+<li>“처음 설정” 화면에서 <b>관리자 아이디</b>(영문·숫자), <b>이름</b>, <b>비밀번호</b>(4자 이상)를 정합니다. 이 아이디로 관리자 화면(기준값·보고서·백업)에 들어갑니다.</li>
+<li>관리자 화면의 <b>기준·백업</b>에서 제품별 기준 수율, 원료육 단가, 사업장(코리아식품·하비랑)을 확인·수정합니다.</li>
+</ol>
+
+<h2><span class="n">5</span>태블릿에서 접속</h2>
+<ol>
+<li>태블릿이 회사 와이파이에 연결되어 있는지 확인합니다.</li>
+<li>크롬(또는 사파리)을 열고, 검은 창에 나온 <b>“태블릿·다른 PC”</b> 주소를 입력합니다. 예: <code>http://192.168.0.15:8080</code></li>
+<li>자주 쓰니 <b>홈 화면에 추가</b>해 두세요. (크롬: 오른쪽 위 ⋮ → 홈 화면에 추가 / 사파리: 공유 버튼 → 홈 화면에 추가)</li>
+</ol>
+
+<h2><span class="n">6</span>직원 계정 · 로그인</h2>
+<ul>
+<li><b>관리자가 만들기:</b> 기준·백업 → 직원 · 로그인에서 아이디, 이름, 비밀번호, 역할(현장/관리자)을 넣고 “계정 만들기”를 누릅니다.</li>
+<li><b>직원이 직접 가입:</b> 로그인 화면의 “회원가입”에서 아이디, 이름, 비밀번호를 정합니다. 직접 가입을 막으려면 <code>config.json</code> 의 <code>"allow_self_register"</code> 를 <code>false</code> 로 바꾸세요.</li>
+<li>비밀번호를 5번 틀리면 30초 동안 잠기고, 30분 동안 쓰지 않으면 자동으로 로그아웃됩니다(관리자가 바꿀 수 있음).</li>
+<li>비밀번호를 잊으면 관리자가 같은 화면에서 새 비밀번호를 정해 줍니다.</li>
+</ul>
+
+<h2><span class="n">7</span>PC 주소 고정 (권장)</h2>
+<p>공유기가 PC 주소를 가끔 바꾸면 태블릿에 저장한 주소로 접속이 안 됩니다. 공유기 관리 화면에서 이 PC에 <b>고정 IP(DHCP 예약)</b>를 걸어 두면 주소가 바뀌지 않습니다. 회사 전산 담당자나 공유기 업체에 “서버 PC 고정 IP 설정”을 요청하면 됩니다.</p>
+
+<h2><span class="n">8</span>PC 켤 때 자동 실행</h2>
+<p>서버 창을 닫은 뒤, 폴더 주소창에 <code>cmd</code> 를 입력해 엔터 → <code>py server.py --autostart</code> 를 입력하면 다음부터 PC를 켤 때 서버가 자동으로 (최소화된 창으로) 켜집니다.</p>
+
+<h2><span class="n">9</span>백업 · 복원</h2>
+<ul>
+<li>서버가 하루 한 번 <code>backup</code> 폴더에 자동 백업합니다(<code>.db</code> 파일과 사람이 읽을 수 있는 <code>.json</code> 파일). 30일 지난 백업은 자동으로 지웁니다.</li>
+<li><b>NAS에 백업하려면</b> 메모장으로 <code>config.json</code> 을 열어 <code>"backup_dir"</code> 를 NAS 폴더로 바꾸고 서버를 다시 켭니다.<br>예: <code>"backup_dir": "\\\\NAS\\공유폴더\\수율백업"</code></li>
+<li><b>복원:</b> 서버 창을 닫고 → <code>data</code> 폴더의 <code>yield.db</code> 를 다른 이름으로 바꿔 둔 뒤 → 백업한 <code>yield-날짜.db</code> 를 <code>data</code> 폴더에 복사해 이름을 <code>yield.db</code> 로 바꾸고 → 서버를 다시 켭니다.</li>
+<li>관리자 화면의 “전체 백업(.json)” 버튼으로 언제든 직접 내려받을 수도 있습니다.</li>
+</ul>
+
+<h2><span class="n">10</span>문제가 생기면</h2>
+<table>
+<tr><th style="width:38%">증상</th><th>확인할 것</th></tr>
+<tr><td>server.py를 눌러도 아무 일이 없거나 “파이썬이 설치되어 있지 않습니다”</td><td>1단계를 다시 하되 “Add python.exe to PATH” 체크를 꼭 확인하세요. 설치 후 PC를 다시 시작하면 확실합니다.</td></tr>
+<tr><td>“포트 8080을 이미 쓰고 있어…”</td><td>서버 창이 이미 열려 있는지 작업 표시줄을 확인하세요. 다른 프로그램이 쓰고 있으면 <code>config.json</code> 의 <code>"port"</code> 를 <code>8090</code> 등으로 바꾸고, 접속 주소도 <code>:8090</code> 으로 바꿉니다.</td></tr>
+<tr><td>PC에서는 되는데 태블릿에서 접속이 안 됨</td><td>① 태블릿이 같은 와이파이인지 ② 서버 창이 켜져 있는지 ③ 방화벽 허용(3단계)을 했는지 ④ 주소의 숫자가 검은 창에 나온 것과 같은지 확인하세요.</td></tr>
+<tr><td>화면 위에 “저장 대기 N건”이 뜸</td><td>잠시 연결이 끊긴 상태입니다. 입력값은 태블릿에 보관되어 있다가 연결되면 자동으로 저장됩니다. 계속 남아 있으면 서버 창이 켜져 있는지 확인하세요.</td></tr>
+<tr><td>관리자 비밀번호를 잊음</td><td>다른 관리자가 있으면 그 사람이 새 비밀번호를 정해 줍니다. 관리자가 한 명뿐이면 서버 PC에서: 서버 창을 닫고 → 이 폴더의 주소창에 <code>cmd</code> 를 입력해 엔터 → <code>py server.py --reset-password 아이디 새비밀번호</code> 를 입력합니다. 그다음 server.py로 다시 켜세요.</td></tr>
+</table>
+
+<h2><span class="n">i</span>폴더 안 파일</h2>
+<table>
+<tr><td><code>server.py</code></td><td>서버 프로그램 · 두 번 눌러 켜기 (맥·리눅스·NAS: <code>python3 server.py</code>)</td></tr>
+<tr><td><code>config.json</code></td><td>포트, 백업 폴더, 백업 보관 기간, 직원 직접 등록 허용 여부</td></tr>
+<tr><td><code>public</code></td><td>화면 파일</td></tr>
+<tr><td><code>data</code></td><td>입력한 데이터 (처음 켜면 생김, 지우지 마세요)</td></tr>
+<tr><td><code>backup</code></td><td>자동 백업 (처음 켜면 생김)</td></tr>
+</table>
+<p class="lead" style="margin-top:24px">문의: 영남이공대 수율 과제팀</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+ "port": 8080,
+ "backup_dir": "backup",
+ "backup_keep_days": 30,
+ "session_hours": 12,
+ "allow_self_register": true
+}
