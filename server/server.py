@@ -46,8 +46,8 @@ BACKUP_DIR = CFG["backup_dir"] if os.path.isabs(CFG["backup_dir"]) else os.path.
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "yield.db")
 
-COLLS = {"lots", "packs", "products", "raws", "staff", "config", "admin", "logs"}
-MANAGER_COLLS = {"products", "config", "admin", "staff"}
+COLLS = {"lots", "packs", "products", "raws", "staff", "config", "admin", "logs", "hbprods", "hbjobs", "hbrecs"}
+MANAGER_COLLS = {"products", "config", "admin", "staff", "hbprods"}
 SECRET = ("salt", "pinHash")
 SEG = re.compile(r"^[A-Za-z0-9_\-.~:@+]{1,200}$")
 MAX_BODY = 2 * 1024 * 1024
