@@ -10,7 +10,7 @@
   ],
   "lowStock": 800,
   "loginRequired": true,
-  "autoLogout": 30
+  "washBase": "rel"
  },
  "products/p_mwd9npb7hdi2": {
   "stdWash": null,

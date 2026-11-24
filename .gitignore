@@ -1,0 +1,10 @@
+# 실행하면 생기는 데이터와 백업 (회사 데이터라 올리지 않음)
+server/data/
+server/backup/
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

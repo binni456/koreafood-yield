@@ -32,7 +32,7 @@ CFG = {
     "port": 8080,
     "backup_dir": "backup",
     "backup_keep_days": 30,
-    "session_hours": 12,
+    "session_hours": 0,  # 0 = 자동 로그아웃 없음
     "allow_self_register": True,
 }
 _cfg_path = os.path.join(BASE, "config.json")
@@ -224,7 +224,7 @@ def get_session(token):
     if not row:
         return None
     sid, last = row
-    if time.time() - last > CFG["session_hours"] * 3600:
+    if CFG.get("session_hours") and time.time() - last > CFG["session_hours"] * 3600:
         end_session(token)
         return None
     d = get_doc("staff/" + sid)
@@ -252,17 +252,27 @@ def ensure_login_config():
 
 # ───────── 처음 실행 ─────────
 def seed():
-    if all_docs():
-        return
     path = os.path.join(BASE, "seed.json")
     if not os.path.exists(path):
         return
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
+    docs = all_docs()
+    if not docs:
+        for p, d in data.items():
+            if valid_path(p):
+                put_doc(p, d)
+        print("  처음 실행: 기본 설정과 제품 기준을 넣었습니다.")
+        return
+    # 이미 쓰던 데이터: 품목표 제품 중 없는 것만 채워 넣음 (있는 제품은 건드리지 않음)
+    have = {re.sub(r"\s", "", str(d.get("name", ""))) for p, d in docs if p.startswith("products/")}
+    n = 0
     for p, d in data.items():
-        if valid_path(p):
+        if p.startswith("products/") and valid_path(p) and get_doc(p) is None and re.sub(r"\s", "", str(d.get("name", ""))) not in have:
             put_doc(p, d)
-    print("  처음 실행: 기본 설정과 제품 기준을 넣었습니다.")
+            n += 1
+    if n:
+        print("  품목표 제품 %d개를 새로 넣었습니다." % n)
 
 
 # ───────── 백업 ─────────
